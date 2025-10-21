@@ -17,6 +17,27 @@ body {font-family: monospace;color: chartreuse;background-color: black;padding: 
     to { transform: translateY(100vh); }
 }
 
+/* Disabled Overlay */
+.disabled-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.85);
+    z-index: 100;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: red;
+    font-size: 24px;
+    font-weight: bold;
+    text-align: center;
+    display: none;
+    border-radius: 8px;
+    flex-direction: column;
+}
+
 header {background: linear-gradient(to right,darkgreen, chartreuse);color:white;padding:24px 30px;border-bottom:1px solid black;}
 h1 {font-size:26px;margin-bottom:8px;display:flex;align-items:center;}
 h1 i {margin-right:12px;font-size:28px;}
@@ -55,6 +76,7 @@ h1 i {margin-right:12px;font-size:28px;}
     align-items: center;
     justify-content: center;
     text-align: center;
+    font-size: 14px;
 }
 
 .code-block:hover {
@@ -68,19 +90,11 @@ h1 i {margin-right:12px;font-size:28px;}
     border-color: #00ff90;
     box-shadow: 0 0 15px rgba(0,255,150,0.3);
 }
-.code-block.danger:hover {
-    border-color: chartreuse;
-    background: green;
-}
 
-.code-block.danger.selected {
-    background: chartreuse;
-    border-color: chartreuse;
-    box-shadow: 0 0 15px green;
-}
 
 .actions {padding:20px 30px;background:chartreuse;border-top:1px solid #e1e8ed;display:flex;justify-content:center;gap:15px;}
 button {padding:12px 24px;border:none;border-radius:6px;cursor:pointer;font-weight:600;transition:all 0.3s ease;font-size:16px;}
+button:disabled {opacity: 0.5; cursor: not-allowed;}
 #submitBtn {background-color:green;color:white;}
 #submitBtn:disabled {background-color:green;cursor:not-allowed;color:black;}
 #resetBtn {background-color:black;color:green;}
@@ -106,6 +120,16 @@ button {padding:12px 24px;border:none;border-radius:6px;cursor:pointer;font-weig
 <div class="binary-rain" id="binaryRain"></div>
 
 <div class="container">
+    <!-- Disabled overlay -->
+    <div class="disabled-overlay" id="disabledOverlay">
+        <div>
+            <div style="font-size: 32px; margin-bottom: 20px;">🚫 ACCESS DENIED</div>
+            <div style="font-size: 18px;">Maximum attempts reached</div>
+            <div style="font-size: 14px; margin-top: 10px; color: #ff8888;">All interactions disabled</div>
+            <button onclick="resetAllProgress()" style="margin-top:20px; padding:10px 20px; background:#ff4444; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">Reset All Progress</button>
+        </div>
+    </div>
+
 <header>
 <h1><i>🛡️</i> Firewall Construction</h1>
 <div class="subtitle">Build your firewall by selecting only SAFE code blocks</div>
@@ -154,27 +178,59 @@ button {padding:12px 24px;border:none;border-radius:6px;cursor:pointer;font-weig
 </div>
 
 <script>
-// Base code blocks
+// SIMPLE FIX: Check URL parameters for reset or use sessionStorage instead
+let attemptsLeft = 3;
+let gameCompleted = false;
+
+// Check if we should reset everything (new session)
+if (!sessionStorage.getItem('firewallSessionStarted')) {
+  // New session - clear any old localStorage and start fresh
+  localStorage.removeItem('firewallAttempts');
+  localStorage.removeItem('firewallCompleted');
+  sessionStorage.setItem('firewallSessionStarted', 'true');
+} else {
+  // Continuing session - load from localStorage
+  const storedAttempts = localStorage.getItem('firewallAttempts');
+  const storedCompleted = localStorage.getItem('firewallCompleted');
+  
+  if (storedAttempts !== null) {
+    attemptsLeft = parseInt(storedAttempts);
+  }
+  if (storedCompleted !== null) {
+    gameCompleted = storedCompleted === 'true';
+  }
+}
+
+// If URL has reset parameter, reset everything
+if (window.location.search.includes('reset=true')) {
+  attemptsLeft = 3;
+  gameCompleted = false;
+  localStorage.removeItem('firewallAttempts');
+  localStorage.removeItem('firewallCompleted');
+  sessionStorage.removeItem('firewallSessionStarted');
+}
+
+console.log('Starting with attempts:', attemptsLeft, 'completed:', gameCompleted);
+
+// SIMPLIFIED code blocks - easier to understand
 const baseBlocks = [
-    { text: 'firewall.enableProtection(true);', safe: true },
-    { text: 'scan.start("C:\\\\System32");', safe: true },
-    { text: 'deleteAll(*.exe);', safe: false },
-    { text: 'openPort(8080);', safe: false },
-    { text: 'updateDefinitions();', safe: true },
-    { text: 'encryptUserData();', safe: false },
-    { text: 'blockIP("192.168.1.5");', safe: true },
-    { text: 'installMalware("trojan.dll");', safe: false },
-    { text: 'log.analyzeSuspicious();', safe: true },
-    { text: 'quarantine.file("suspicious.dll");', safe: true },
-    { text: 'disable.antivirus();', safe: false },
-    { text: 'format.drive("C:");', safe: false }
+    { text: 'Enable Firewall', safe: true },
+    { text: 'Scan for Viruses', safe: true },
+    { text: 'Delete All Files', safe: false },
+    { text: 'Open All Ports', safe: false },
+    { text: 'Update Security', safe: true },
+    { text: 'Encrypt Data', safe: true },
+    { text: 'Block Suspicious IP', safe: true },
+    { text: 'Install Malware', safe: false },
+    { text: 'Analyze Logs', safe: true },
+    { text: 'Quarantine Threat', safe: true },
+    { text: 'Disable Protection', safe: false },
+    { text: 'Format Hard Drive', safe: false }
 ];
 
 let selectedBlocks = [];
 let codeBlocks = [...baseBlocks];
 let timeLeft = 180;
-let attemptsLeft = 3;
-let gameCompleted = false;
 let progress = 0;
 
 const container = document.getElementById('codeBlocks');
@@ -189,6 +245,7 @@ const resultDetails = document.getElementById('resultDetails');
 const submitBtn = document.getElementById('submitBtn');
 const resetBtn = document.getElementById('resetBtn');
 const sabotageWarning = document.getElementById('sabotageWarning');
+const disabledOverlay = document.getElementById('disabledOverlay');
 
 // Create binary rain
 function createBinaryRain() {
@@ -223,7 +280,7 @@ function renderBlocks() {
 }
 
 function toggleSelect(index, div) {
-    if (gameCompleted) return;
+    if (gameCompleted || attemptsLeft === 0) return;
     
     if (selectedBlocks.includes(index)) {
         selectedBlocks = selectedBlocks.filter(i => i !== index);
@@ -250,7 +307,7 @@ function updateProgress() {
     progressElement.style.width = `${progress}%`;
     progressText.textContent = `Firewall Integrity: ${Math.round(progress)}%`;
     
-    submitBtn.disabled = selectedBlocks.length === 0;
+    submitBtn.disabled = selectedBlocks.length === 0 || attemptsLeft <= 0;
 }
 
 // Timer
@@ -277,7 +334,7 @@ function formatMMSS(sec) {
 function handleTimeUp() {
     resultDetails.innerHTML = `<div style="color:#721c24;">Time's up! ${attemptsLeft-1} attempt(s) remaining.</div>`;
     attemptsLeft--;
-    attemptsDisplay.textContent = attemptsLeft;
+    localStorage.setItem('firewallAttempts', attemptsLeft);
     if (attemptsLeft <= 0) {
         gameOver();
     } else {
@@ -286,17 +343,41 @@ function handleTimeUp() {
         }, 3000);
     }
     showResults();
+    updateUI();
+}
+
+// Disable all interactions
+function disableAllInteractions() {
+    submitBtn.disabled = true;
+    resetBtn.disabled = true;
+    
+    // Disable all code blocks
+    document.querySelectorAll('.code-block').forEach(block => {
+        block.style.pointerEvents = 'none';
+        block.style.opacity = '0.5';
+    });
+    
+    disabledOverlay.style.display = 'flex';
+    clearInterval(timerInterval);
+}
+
+// Reset function for the overlay button
+function resetAllProgress() {
+    localStorage.removeItem('firewallAttempts');
+    localStorage.removeItem('firewallCompleted');
+    sessionStorage.removeItem('firewallSessionStarted');
+    location.reload();
 }
 
 // Submit with 3 attempts limit
 function checkFirewall() {
-    if (gameCompleted) return;
+    if (gameCompleted || attemptsLeft <= 0) return;
     
     clearInterval(timerInterval);
     gameCompleted = true;
     
     attemptsLeft--;
-    attemptsDisplay.textContent = attemptsLeft;
+    localStorage.setItem('firewallAttempts', attemptsLeft);
     
     const safeBlocks = selectedBlocks.filter(index => codeBlocks[index].safe);
     const unsafeBlocks = selectedBlocks.filter(index => !codeBlocks[index].safe);
@@ -310,8 +391,12 @@ function checkFirewall() {
         resultTitle.textContent = "✅ Firewall Built Successfully!";
         scoreDisplay.textContent = `Integrity: 100%`;
         resultDetails.innerHTML = '<div style="color:#155724;font-weight:bold;">Perfect! Your firewall is fully operational!</div>';
+        localStorage.setItem('firewallCompleted', 'true');
         setTimeout(() => {
-            window.location.href = 'next-page.html';
+            localStorage.removeItem('firewallAttempts');
+            localStorage.removeItem('firewallCompleted');
+            sessionStorage.removeItem('firewallSessionStarted');
+            window.location.href = 'next-challenge.html';
         }, 2000);
     } else {
         // FAILED
@@ -330,6 +415,7 @@ function checkFirewall() {
     }
     
     showResults();
+    updateUI();
 }
 
 function retryAttempt() {
@@ -337,24 +423,26 @@ function retryAttempt() {
 }
 
 function resetGame() {
-    selectedBlocks = [];
-    gameCompleted = false;
-    progress = 0;
-    updateProgress();
-    result.style.display = 'none';
-    submitBtn.disabled = true;
-    timeLeft = 180;
-    timerDisplay.textContent = "03:00";
-    renderBlocks();
-    startTimer();
+    if (attemptsLeft > 0 && !gameCompleted) {
+        selectedBlocks = [];
+        gameCompleted = false;
+        progress = 0;
+        updateProgress();
+        result.style.display = 'none';
+        submitBtn.disabled = true;
+        timeLeft = 180;
+        timerDisplay.textContent = "03:00";
+        renderBlocks();
+        startTimer();
+        updateUI();
+    }
 }
 
 function gameOver() {
     resultTitle.textContent = "🚫 Firewall Compromised";
     scoreDisplay.textContent = `Final Integrity: ${Math.round(progress)}%`;
     resultDetails.innerHTML = '<div style="color:#721c24;">No attempts remaining. System compromised.</div>';
-    submitBtn.disabled = true;
-    clearInterval(timerInterval);
+    disableAllInteractions();
     showResults();
 }
 
@@ -362,9 +450,35 @@ function showResults() {
     result.style.display = 'block';
 }
 
+// Update UI
+function updateUI() {
+    attemptsDisplay.textContent = attemptsLeft;
+    submitBtn.disabled = gameCompleted || attemptsLeft <= 0 || selectedBlocks.length === 0;
+    resetBtn.disabled = gameCompleted || attemptsLeft <= 0;
+}
+
+// Check initial state
+function checkInitialState() {
+    if (gameCompleted) {
+        resultTitle.textContent = "✅ Challenge Already Completed";
+        scoreDisplay.textContent = "Integrity: 100%";
+        resultDetails.innerHTML = '<div style="color:#155724;font-weight:bold;">Challenge already completed!</div>';
+        showResults();
+        setTimeout(() => {
+            window.location.href = 'next-challenge.html';
+        }, 2000);
+    } else if (attemptsLeft <= 0) {
+        disableAllInteractions();
+        resultTitle.textContent = "🚫 Firewall Compromised";
+        scoreDisplay.textContent = "Final Integrity: 0%";
+        resultDetails.innerHTML = '<div style="color:#721c24;">No attempts remaining.</div>';
+        showResults();
+    }
+}
+
 // Reset button
 resetBtn.addEventListener('click', () => {
-    if (!gameCompleted) {
+    if (!gameCompleted && attemptsLeft > 0) {
         selectedBlocks = [];
         progress = 0;
         updateProgress();
@@ -375,9 +489,9 @@ resetBtn.addEventListener('click', () => {
 // Sabotage system - add malware blocks
 function injectMalware() {
     const malwareBlocks = [
-        { text: 'execute.payload("ransomware.exe");', safe: false },
-        { text: 'disable.firewall();', safe: false },
-        { text: 'backdoor.create("admin");', safe: false }
+        { text: 'Execute Ransomware', safe: false },
+        { text: 'Disable Firewall', safe: false },
+        { text: 'Create Backdoor', safe: false }
     ];
     
     // Add 1-2 random malware blocks
@@ -405,7 +519,13 @@ function checkForSabotage() {
 // Initialize
 createBinaryRain();
 renderBlocks();
-startTimer();
+updateUI();
+checkInitialState();
+
+// Only start timer if game is still active
+if (attemptsLeft > 0 && !gameCompleted) {
+    startTimer();
+}
 
 // Check for sabotage every second
 setInterval(checkForSabotage, 1000);

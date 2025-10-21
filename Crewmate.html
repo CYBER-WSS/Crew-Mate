@@ -17,6 +17,27 @@ body {font-family: monospace;color: chartreuse;background-color: black;padding: 
     to { transform: translateY(100vh); }
 }
 
+/* Disabled Overlay */
+.disabled-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.85);
+    z-index: 100;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: red;
+    font-size: 24px;
+    font-weight: bold;
+    text-align: center;
+    display: none;
+    border-radius: 8px;
+    flex-direction: column;
+}
+
 header {background: linear-gradient(to right,darkgreen, chartreuse);color:white;padding:24px 30px;border-bottom:1px solid black;}
 h1 {font-size:26px;margin-bottom:8px;display:flex;align-items:center;}
 h1 i {margin-right:12px;font-size:28px;}
@@ -41,6 +62,7 @@ thead {position:sticky;top:0;z-index:10;}
 th {background-color:greenyellow;color:black;padding:16px 12px;text-align:left;font-weight:600;border-right:1px solid rgba(255,255,255,0.1);}
 th:last-child {border-right:none;}
 tbody tr {border-bottom:1px solid #e9ecef;transition:background-color 0.2s;cursor:pointer;}
+tbody tr.disabled {cursor: not-allowed; opacity: 0.5;}
 tbody tr:hover {background-color:#f8f9fa;}
 tbody tr.selected {background-color:#fff3cd;}
 tbody tr.correct {background-color:#d4edda;}
@@ -58,6 +80,7 @@ td:last-child {border-right:none;}
 .details-cell {min-width:200px;}
 .actions {padding:20px 30px;background:chartreuse;border-top:1px solid #e1e8ed;display:flex;justify-content:center;gap:15px;}
 button {padding:12px 24px;border:none;border-radius:6px;cursor:pointer;font-weight:600;transition:all 0.3s ease;font-size:16px;}
+button:disabled {opacity: 0.5; cursor: not-allowed;}
 #submitBtn {background-color:green;color:white;}
 #submitBtn:disabled {background-color:green;cursor:not-allowed;color:black;}
 #resetBtn {background-color:black;color:green;}
@@ -72,148 +95,193 @@ button {padding:12px 24px;border:none;border-radius:6px;cursor:pointer;font-weig
 <div class="binary-rain" id="binaryRain"></div>
 
 <div class="container">
-<header>
-<h1><i>🔍</i> Network Security Log</h1>
-<div class="subtitle">Identify suspicious network activity in the log below</div>
-<div class="summary">
-<div class="summary-item">Total Events: <strong>67</strong></div>
-<div class="summary-item">Time Range: <strong>00:15:03 - 02:50:47</strong></div>
-<div class="summary-item">Suspicious Items: <strong>5</strong></div>
-</div>
-</header>
+    <!-- Disabled overlay -->
+    <div class="disabled-overlay" id="disabledOverlay">
+        <div>
+            <div style="font-size: 32px; margin-bottom: 20px;">🚫 ACCESS DENIED</div>
+            <div style="font-size: 18px;">Maximum attempts reached</div>
+            <div style="font-size: 14px; margin-top: 10px; color: #ff8888;">All interactions disabled</div>
+            <button onclick="resetAllProgress()" style="margin-top:20px; padding:10px 20px; background:#ff4444; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">Reset All Progress</button>
+        </div>
+    </div>
 
-<div class="training-controls">
-<div class="timer-container">
-<span>Time Remaining:</span>
-<div class="timer" id="timer">05:00</div>
-</div>
-<div class="timer-container">
-<span>Attempts Left:</span>
-<div class="attempts" id="attempts">3</div>
-</div>
-<div class="progress-container">
-<div class="progress-bar">
-<div class="progress" id="progress"></div>
-</div>
-<div class="progress-text" id="progressText">Progress: 0%</div>
-</div>
-</div>
+    <header>
+        <h1><i>🔍</i> Network Security Log</h1>
+        <div class="subtitle">Identify suspicious network activity in the log below</div>
+        <div class="summary">
+            <div class="summary-item">Total Events: <strong>67</strong></div>
+            <div class="summary-item">Time Range: <strong>00:15:03 - 02:50:47</strong></div>
+            <div class="summary-item">Suspicious Items: <strong>5</strong></div>
+        </div>
+    </header>
 
-<div class="task-instructions">
-<div class="instructions">
-<strong>Training Task:</strong> Find <strong>5 suspicious activities</strong> in this network log. Click to select them. You have <strong>3 attempts</strong> and <strong>5 minutes</strong>.
-</div>
-<div class="sabotage-warning" id="sabotageWarning">⚠️ WARNING: The log has been sabotaged! Entries have been shuffled!</div>
-</div>
+    <div class="training-controls">
+        <div class="timer-container">
+            <span>Time Remaining:</span>
+            <div class="timer" id="timer">05:00</div>
+        </div>
+        <div class="timer-container">
+            <span>Attempts Left:</span>
+            <div class="attempts" id="attempts">3</div>
+        </div>
+        <div class="progress-container">
+            <div class="progress-bar">
+                <div class="progress" id="progress"></div>
+            </div>
+            <div class="progress-text" id="progressText">Progress: 0%</div>
+        </div>
+    </div>
 
-<div class="table-container">
-<table id="logTable">
-<thead>
-<tr>
-<th>ID</th>
-<th>Timestamp</th>
-<th>Host</th>
-<th>Service</th>
-<th>Action</th>
-<th>Source IP</th>
-<th>Dest IP</th>
-<th>Protocol</th>
-<th>Src Port</th>
-<th>Dest Port</th>
-<th>Details</th>
-</tr>
-</thead>
-<tbody id="logTableBody"></tbody>
-</table>
-</div>
+    <div class="task-instructions">
+        <div class="instructions">
+            <strong>Training Task:</strong> Find <strong>5 suspicious activities</strong> in this network log. Click to select them. You have <strong>3 attempts</strong> and <strong>5 minutes</strong>.
+        </div>
+        <div class="sabotage-warning" id="sabotageWarning">⚠️ WARNING: The log has been sabotaged! Entries have been shuffled!</div>
+    </div>
 
-<div class="actions">
-<button id="submitBtn" disabled>Submit Answers</button>
-<button id="resetBtn">Reset Selection</button>
-</div>
+    <div class="table-container">
+        <table id="logTable">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Timestamp</th>
+                    <th>Host</th>
+                    <th>Service</th>
+                    <th>Action</th>
+                    <th>Source IP</th>
+                    <th>Dest IP</th>
+                    <th>Protocol</th>
+                    <th>Src Port</th>
+                    <th>Dest Port</th>
+                    <th>Details</th>
+                </tr>
+            </thead>
+            <tbody id="logTableBody"></tbody>
+        </table>
+    </div>
 
-<div class="results" id="results">
-<h2 id="resultTitle">Access Granted</h2>
-<div class="score" id="scoreDisplay">Your Score: 0/5</div>
-<div id="resultDetails"></div>
-</div>
+    <div class="actions">
+        <button id="submitBtn" disabled>Submit Answers</button>
+        <button id="resetBtn">Reset Selection</button>
+    </div>
 
-<div class="footer">Network Security Log - 3 Attempts Maximum</div>
+    <div class="results" id="results">
+        <h2 id="resultTitle">Access Granted</h2>
+        <div class="score" id="scoreDisplay">Your Score: 0/5</div>
+        <div id="resultDetails"></div>
+    </div>
+
+    <div class="footer">Network Security Log - 3 Attempts Maximum</div>
 </div>
 
 <script>
 // Suspicious entries
 const suspiciousEntries = [19,21,22,26,47];
 
-// Log data (shortened for example - include all 67 entries)
-const logData = [{ id: 1, timestamp: "Oct 09 00:15:03", host: "websrv01", service: "kernel", action: "ACCEPT", source: "192.168.1.42", dest: "192.168.1.10", protocol: "TCP", srcPort: "53214", destPort: "443", details: "" },
-  { id: 2, timestamp: "Oct 09 00:17:22", host: "fw01", service: "kernel", action: "ACCEPT", source: "192.168.1.10", dest: "8.8.8.8", protocol: "UDP", srcPort: "51723", destPort: "53", details: "" },
-  { id: 3, timestamp: "Oct 09 00:18:15", host: "dbsrv02", service: "sshd", action: "Accepted password", source: "192.168.1.50", dest: "", protocol: "SSH", srcPort: "51512", destPort: "22", details: "for admin" },
-  { id: 4, timestamp: "Oct 09 00:19:41", host: "app01", service: "systemd", action: "Started", source: "", dest: "", protocol: "", srcPort: "", destPort: "", details: "nginx service" },
-  { id: 5, timestamp: "Oct 09 00:20:09", host: "websrv02", service: "httpd", action: "GET", source: "192.168.1.50", dest: "", protocol: "HTTP", srcPort: "", destPort: "80", details: "/index.html 200 1423" },
-  { id: 6, timestamp: "Oct 09 00:21:55", host: "fw01", service: "kernel", action: "ACCEPT", source: "192.168.1.33", dest: "93.184.216.34", protocol: "TCP", srcPort: "54021", destPort: "80", details: "" },
-  { id: 7, timestamp: "Oct 09 00:25:16", host: "mail01", service: "postfix/smtpd", action: "connect", source: "192.168.1.15", dest: "", protocol: "SMTP", srcPort: "", destPort: "25", details: "" },
-  { id: 8, timestamp: "Oct 09 00:28:12", host: "mail01", service: "postfix/smtpd", action: "disconnect", source: "192.168.1.15", dest: "", protocol: "SMTP", srcPort: "", destPort: "25", details: "ehlo=1 mail=1 rcpt=1" },
-  { id: 9, timestamp: "Oct 09 00:30:42", host: "fw01", service: "kernel", action: "ACCEPT", source: "192.168.1.60", dest: "172.217.10.14", protocol: "TCP", srcPort: "50344", destPort: "443", details: "" },
-  { id: 10, timestamp: "Oct 09 00:33:09", host: "websrv01", service: "httpd", action: "GET", source: "192.168.1.45", dest: "", protocol: "HTTP", srcPort: "", destPort: "80", details: "/api/v1/status 200 312" },
-  { id: 11, timestamp: "Oct 09 00:35:02", host: "dbsrv01", service: "CRON", action: "CMD", source: "", dest: "", protocol: "", srcPort: "", destPort: "", details: "/usr/local/bin/backup.sh" },
-  { id: 12, timestamp: "Oct 09 00:36:48", host: "fw01", service: "kernel", action: "ACCEPT", source: "192.168.1.41", dest: "192.168.1.10", protocol: "TCP", srcPort: "53311", destPort: "22", details: "" },
-  { id: 13, timestamp: "Oct 09 00:37:11", host: "fw01", service: "kernel", action: "DROP", source: "203.0.113.21", dest: "192.168.1.10", protocol: "TCP", srcPort: "54321", destPort: "22", details: "" },
-  { id: 14, timestamp: "Oct 09 00:39:09", host: "app01", service: "nginx", action: "GET", source: "", dest: "", protocol: "HTTP", srcPort: "", destPort: "80", details: "/login 200 1056" },
-  { id: 15, timestamp: "Oct 09 01:02:11", host: "fw01", service: "kernel", action: "DROP", source: "45.83.212.99", dest: "192.168.1.10", protocol: "TCP", srcPort: "50412", destPort: "22", details: "multiple attempts" },
-  { id: 16, timestamp: "Oct 09 01:04:43", host: "websrv02", service: "sshd", action: "Failed password", source: "45.83.212.99", dest: "", protocol: "SSH", srcPort: "50412", destPort: "22", details: "for invalid user test" },
-  { id: 17, timestamp: "Oct 09 01:05:01", host: "websrv02", service: "sshd", action: "Failed password", source: "45.83.212.99", dest: "", protocol: "SSH", srcPort: "50413", destPort: "22", details: "for invalid user admin" },
-  { id: 18, timestamp: "Oct 09 01:05:44", host: "websrv02", service: "sshd", action: "Failed password", source: "45.83.212.99", dest: "", protocol: "SSH", srcPort: "50414", destPort: "22", details: "for invalid user root" },
-  { id: 19, timestamp: "Oct 09 01:06:09", host: "websrv02", service: "sshd", action: "Accepted password", source: "45.83.212.99", dest: "", protocol: "SSH", srcPort: "50415", destPort: "22", details: "for admin" },
-  { id: 20, timestamp: "Oct 09 01:07:42", host: "fw01", service: "kernel", action: "ACCEPT", source: "192.168.1.10", dest: "198.51.100.44", protocol: "TCP", srcPort: "49831", destPort: "8080", details: "unusual outbound" },
-  { id: 21, timestamp: "Oct 09 01:09:12", host: "app01", service: "systemd", action: "Unexpected process", source: "", dest: "", protocol: "", srcPort: "", destPort: "", details: "/tmp/.hidden/runme.sh" },
-  { id: 22, timestamp: "Oct 09 01:09:33", host: "fw01", service: "kernel", action: "ACCEPT", source: "192.168.1.10", dest: "198.51.100.44", protocol: "TCP", srcPort: "49832", destPort: "8080", details: "data exfil pattern" },
-  { id: 23, timestamp: "Oct 09 01:10:41", host: "dbsrv02", service: "systemd", action: "Created user", source: "", dest: "", protocol: "", srcPort: "", destPort: "", details: "backup1" },
-  { id: 24, timestamp: "Oct 09 01:12:56", host: "fw01", service: "kernel", action: "DROP", source: "203.0.113.44", dest: "192.168.1.10", protocol: "TCP", srcPort: "50522", destPort: "3389", details: "" },
-  { id: 25, timestamp: "Oct 09 01:15:32", host: "websrv02", service: "httpd", action: "POST", source: "192.168.1.10", dest: "", protocol: "HTTP", srcPort: "", destPort: "80", details: "/upload.php 500 0" },
-  { id: 26, timestamp: "Oct 09 01:16:04", host: "fw01", service: "kernel", action: "ACCEPT", source: "192.168.1.10", dest: "198.51.100.44", protocol: "TCP", srcPort: "49833", destPort: "8080", details: "persistence beacon" },
-  { id: 27, timestamp: "Oct 09 01:17:49", host: "app01", service: "CRON", action: "CMD", source: "", dest: "", protocol: "", srcPort: "", destPort: "", details: "/tmp/.hidden/runme.sh" },
-  { id: 28, timestamp: "Oct 09 01:20:10", host: "fw01", service: "kernel", action: "ACCEPT", source: "192.168.1.45", dest: "192.168.1.10", protocol: "TCP", srcPort: "54111", destPort: "443", details: "" },
-  { id: 29, timestamp: "Oct 09 01:23:39", host: "dbsrv01", service: "systemd", action: "Finished", source: "", dest: "", protocol: "", srcPort: "", destPort: "", details: "hourly data sync" },
-  { id: 30, timestamp: "Oct 09 01:26:11", host: "websrv01", service: "httpd", action: "GET", source: "", dest: "", protocol: "HTTP", srcPort: "", destPort: "80", details: "/api/v1/health 200 421" },
-  { id: 31, timestamp: "Oct 09 01:29:52", host: "app01", service: "systemd", action: "Completed", source: "", dest: "", protocol: "", srcPort: "", destPort: "", details: "scheduled cleanup" },
-  { id: 32, timestamp: "Oct 09 01:31:10", host: "fw01", service: "kernel", action: "ACCEPT", source: "192.168.1.12", dest: "172.217.10.14", protocol: "TCP", srcPort: "50513", destPort: "443", details: "" },
-  { id: 33, timestamp: "Oct 09 01:34:20", host: "fw01", service: "kernel", action: "DROP", source: "10.0.0.250", dest: "192.168.1.10", protocol: "ICMP", srcPort: "", destPort: "", details: "TYPE=8 CODE=0" },
-  { id: 34, timestamp: "Oct 09 01:36:51", host: "websrv02", service: "httpd", action: "GET", source: "", dest: "", protocol: "HTTP", srcPort: "", destPort: "80", details: "/reports 200 2031" },
-  { id: 35, timestamp: "Oct 09 01:40:13", host: "mail01", service: "postfix/smtpd", action: "connect", source: "192.168.1.15", dest: "", protocol: "SMTP", srcPort: "", destPort: "25", details: "" },
-  { id: 36, timestamp: "Oct 09 01:42:59", host: "mail01", service: "postfix/smtpd", action: "disconnect", source: "192.168.1.15", dest: "", protocol: "SMTP", srcPort: "", destPort: "25", details: "" },
-  { id: 37, timestamp: "Oct 09 01:45:33", host: "fw01", service: "kernel", action: "ACCEPT", source: "192.168.1.45", dest: "172.217.14.110", protocol: "TCP", srcPort: "50222", destPort: "443", details: "" },
-  { id: 38, timestamp: "Oct 09 02:00:01", host: "websrv02", service: "httpd", action: "GET", source: "192.168.1.50", dest: "", protocol: "HTTP", srcPort: "", destPort: "80", details: "/home.html 200 1582" },
-  { id: 39, timestamp: "Oct 09 02:01:22", host: "fw01", service: "kernel", action: "ACCEPT", source: "192.168.1.20", dest: "192.168.1.10", protocol: "TCP", srcPort: "52022", destPort: "443", details: "" },
-  { id: 40, timestamp: "Oct 09 02:03:41", host: "dbsrv02", service: "systemd", action: "Started", source: "", dest: "", protocol: "", srcPort: "", destPort: "", details: "nightly backup" },
-  { id: 41, timestamp: "Oct 09 02:05:12", host: "app01", service: "nginx", action: "GET", source: "", dest: "", protocol: "HTTP", srcPort: "", destPort: "80", details: "/dashboard 200 1203" },
-  { id: 42, timestamp: "Oct 09 02:07:44", host: "websrv01", service: "httpd", action: "GET", source: "192.168.1.55", dest: "", protocol: "HTTP", srcPort: "", destPort: "80", details: "/api/v2/status 200 342" },
-  { id: 43, timestamp: "Oct 09 02:09:55", host: "fw01", service: "kernel", action: "DROP", source: "203.0.113.21", dest: "192.168.1.10", protocol: "TCP", srcPort: "54322", destPort: "22", details: "" },
-  { id: 44, timestamp: "Oct 09 02:11:22", host: "app01", service: "CRON", action: "CMD", source: "", dest: "", protocol: "", srcPort: "", destPort: "", details: "/usr/local/bin/cleanup.sh" },
-  { id: 45, timestamp: "Oct 09 02:13:33", host: "websrv02", service: "sshd", action: "Failed password", source: "203.0.113.21", dest: "", protocol: "SSH", srcPort: "50422", destPort: "22", details: "for invalid user guest" },
-  { id: 46, timestamp: "Oct 09 02:15:11", host: "dbsrv01", service: "systemd", action: "Created", source: "", dest: "", protocol: "", srcPort: "", destPort: "", details: "temporary log archive" },
-  { id: 47, timestamp: "Oct 09 02:16:47", host: "fw01", service: "kernel", action: "ACCEPT", source: "192.168.1.10", dest: "198.51.100.44", protocol: "TCP", srcPort: "49834", destPort: "8080", details: "unusual outbound" },
-  { id: 48, timestamp: "Oct 09 02:18:21", host: "app01", service: "systemd", action: "Unexpected process", source: "", dest: "", protocol: "", srcPort: "", destPort: "", details: "/tmp/.hidden/script.sh" },
-  { id: 49, timestamp: "Oct 09 02:20:44", host: "mail01", service: "postfix/smtpd", action: "connect", source: "192.168.1.16", dest: "", protocol: "SMTP", srcPort: "", destPort: "25", details: "" },
-  { id: 50, timestamp: "Oct 09 02:22:59", host: "websrv02", service: "httpd", action: "GET", source: "", dest: "", protocol: "HTTP", srcPort: "", destPort: "80", details: "/login 200 1043" },
-  { id: 51, timestamp: "Oct 09 02:24:12", host: "fw01", service: "kernel", action: "DROP", source: "203.0.113.44", dest: "192.168.1.10", protocol: "TCP", srcPort: "50523", destPort: "3389", details: "" },
-  { id: 52, timestamp: "Oct 09 02:26:30", host: "dbsrv02", service: "sshd", action: "Accepted password", source: "192.168.1.50", dest: "", protocol: "SSH", srcPort: "51520", destPort: "22", details: "for admin" },
-  { id: 53, timestamp: "Oct 09 02:28:11", host: "app01", service: "nginx", action: "POST", source: "", dest: "", protocol: "HTTP", srcPort: "", destPort: "80", details: "/upload.php 500 0" },
-  { id: 54, timestamp: "Oct 09 02:29:59", host: "websrv01", service: "httpd", action: "GET", source: "192.168.1.45", dest: "", protocol: "HTTP", srcPort: "", destPort: "80", details: "/api/v1/stats 200 218" },
-  { id: 55, timestamp: "Oct 09 02:31:40", host: "fw01", service: "kernel", action: "ACCEPT", source: "192.168.1.10", dest: "198.51.100.44", protocol: "TCP", srcPort: "49835", destPort: "8080", details: "persistence beacon" },
-  { id: 56, timestamp: "Oct 09 02:33:11", host: "app01", service: "CRON", action: "CMD", source: "", dest: "", protocol: "", srcPort: "", destPort: "", details: "/tmp/.hidden/runme.sh" },
-  { id: 57, timestamp: "Oct 09 02:34:52", host: "websrv02", service: "httpd", action: "GET", source: "", dest: "", protocol: "HTTP", srcPort: "", destPort: "80", details: "/reports 200 2041" },
-  { id: 58, timestamp: "Oct 09 02:36:31", host: "mail01", service: "postfix/smtpd", action: "disconnect", source: "192.168.1.16", dest: "", protocol: "SMTP", srcPort: "", destPort: "25", details: "" },
-  { id: 59, timestamp: "Oct 09 02:38:10", host: "fw01", service: "kernel", action: "ACCEPT", source: "192.168.1.45", dest: "172.217.14.111", protocol: "TCP", srcPort: "50223", destPort: "443", details: "" },
-  { id: 60, timestamp: "Oct 09 02:40:55", host: "dbsrv01", service: "systemd", action: "Completed", source: "", dest: "", protocol: "", srcPort: "", destPort: "", details: "hourly data sync" },
-  { id: 61, timestamp: "Oct 09 02:42:31", host: "websrv01", service: "httpd", action: "GET", source: "", dest: "", protocol: "HTTP", srcPort: "", destPort: "80", details: "/api/v2/health 200 422" },
-  { id: 62, timestamp: "Oct 09 02:44:17", host: "fw01", service: "kernel", action: "DROP", source: "10.0.0.251", dest: "192.168.1.10", protocol: "ICMP", srcPort: "", destPort: "", details: "TYPE=8 CODE=0" },
-  { id: 63, timestamp: "Oct 09 02:45:33", host: "app01", service: "systemd", action: "Completed", source: "", dest: "", protocol: "", srcPort: "", destPort: "", details: "scheduled maintenance" },
-  { id: 64, timestamp: "Oct 09 02:46:12", host: "mail01", service: "postfix/smtpd", action: "connect", source: "192.168.1.17", dest: "", protocol: "SMTP", srcPort: "", destPort: "25", details: "" },
-  { id: 65, timestamp: "Oct 09 02:47:59", host: "websrv02", service: "httpd", action: "GET", source: "", dest: "", protocol: "HTTP", srcPort: "", destPort: "80", details: "/dashboard 200 1211" },
-  { id: 66, timestamp: "Oct 09 02:49:30", host: "fw01", service: "kernel", action: "ACCEPT", source: "192.168.1.46", dest: "172.217.14.112", protocol: "TCP", srcPort: "50224", destPort: "443", details: "" },
-  { id: 67, timestamp: "Oct 09 02:50:47", host: "dbsrv02", service: "systemd", action: "Finished", source: "", dest: "", protocol: "", srcPort: "", destPort: "", details: "temporary backup" }
+// Log data (shortened for example)
+const logData = [
+    { id: 1, timestamp: "Oct 09 00:15:03", host: "websrv01", service: "kernel", action: "ACCEPT", source: "192.168.1.42", dest: "192.168.1.10", protocol: "TCP", srcPort: "53214", destPort: "443", details: "" },
+    { id: 2, timestamp: "Oct 09 00:17:22", host: "fw01", service: "kernel", action: "ACCEPT", source: "192.168.1.10", dest: "8.8.8.8", protocol: "UDP", srcPort: "51723", destPort: "53", details: "" },
+    { id: 3, timestamp: "Oct 09 00:18:15", host: "dbsrv02", service: "sshd", action: "Accepted password", source: "192.168.1.50", dest: "", protocol: "SSH", srcPort: "51512", destPort: "22", details: "for admin" },
+    { id: 4, timestamp: "Oct 09 00:19:41", host: "app01", service: "systemd", action: "Started", source: "", dest: "", protocol: "", srcPort: "", destPort: "", details: "nginx service" },
+    { id: 5, timestamp: "Oct 09 00:20:09", host: "websrv02", service: "httpd", action: "GET", source: "192.168.1.50", dest: "", protocol: "HTTP", srcPort: "", destPort: "80", details: "/index.html 200 1423" },
+    { id: 6, timestamp: "Oct 09 00:21:55", host: "fw01", service: "kernel", action: "ACCEPT", source: "192.168.1.33", dest: "93.184.216.34", protocol: "TCP", srcPort: "54021", destPort: "80", details: "" },
+    { id: 7, timestamp: "Oct 09 00:25:16", host: "mail01", service: "postfix/smtpd", action: "connect", source: "192.168.1.15", dest: "", protocol: "SMTP", srcPort: "", destPort: "25", details: "" },
+    { id: 8, timestamp: "Oct 09 00:28:12", host: "mail01", service: "postfix/smtpd", action: "disconnect", source: "192.168.1.15", dest: "", protocol: "SMTP", srcPort: "", destPort: "25", details: "ehlo=1 mail=1 rcpt=1" },
+    { id: 9, timestamp: "Oct 09 00:30:42", host: "fw01", service: "kernel", action: "ACCEPT", source: "192.168.1.60", dest: "172.217.10.14", protocol: "TCP", srcPort: "50344", destPort: "443", details: "" },
+    { id: 10, timestamp: "Oct 09 00:33:09", host: "websrv01", service: "httpd", action: "GET", source: "192.168.1.45", dest: "", protocol: "HTTP", srcPort: "", destPort: "80", details: "/api/v1/status 200 312" },
+    { id: 11, timestamp: "Oct 09 00:35:02", host: "dbsrv01", service: "CRON", action: "CMD", source: "", dest: "", protocol: "", srcPort: "", destPort: "", details: "/usr/local/bin/backup.sh" },
+    { id: 12, timestamp: "Oct 09 00:36:48", host: "fw01", service: "kernel", action: "ACCEPT", source: "192.168.1.41", dest: "192.168.1.10", protocol: "TCP", srcPort: "53311", destPort: "22", details: "" },
+    { id: 13, timestamp: "Oct 09 00:37:11", host: "fw01", service: "kernel", action: "DROP", source: "203.0.113.21", dest: "192.168.1.10", protocol: "TCP", srcPort: "54321", destPort: "22", details: "" },
+    { id: 14, timestamp: "Oct 09 00:39:09", host: "app01", service: "nginx", action: "GET", source: "", dest: "", protocol: "HTTP", srcPort: "", destPort: "80", details: "/login 200 1056" },
+    { id: 15, timestamp: "Oct 09 01:02:11", host: "fw01", service: "kernel", action: "DROP", source: "45.83.212.99", dest: "192.168.1.10", protocol: "TCP", srcPort: "50412", destPort: "22", details: "multiple attempts" },
+    { id: 16, timestamp: "Oct 09 01:04:43", host: "websrv02", service: "sshd", action: "Failed password", source: "45.83.212.99", dest: "", protocol: "SSH", srcPort: "50412", destPort: "22", details: "for invalid user test" },
+    { id: 17, timestamp: "Oct 09 01:05:01", host: "websrv02", service: "sshd", action: "Failed password", source: "45.83.212.99", dest: "", protocol: "SSH", srcPort: "50413", destPort: "22", details: "for invalid user admin" },
+    { id: 18, timestamp: "Oct 09 01:05:44", host: "websrv02", service: "sshd", action: "Failed password", source: "45.83.212.99", dest: "", protocol: "SSH", srcPort: "50414", destPort: "22", details: "for invalid user root" },
+    { id: 19, timestamp: "Oct 09 01:06:09", host: "websrv02", service: "sshd", action: "Accepted password, from another device", source: "45.83.212.99", dest: "", protocol: "SSH", srcPort: "50415", destPort: "22", details: "for admin" },
+    { id: 20, timestamp: "Oct 09 01:07:42", host: "fw01", service: "kernel", action: "ACCEPT", source: "192.168.1.10", dest: "198.51.100.44", protocol: "TCP", srcPort: "49831", destPort: "8080", details: "unusual outbound" },
+    { id: 21, timestamp: "Oct 09 01:09:12", host: "app01", service: "systemd", action: "Unexpected process interference", source: "", dest: "", protocol: "", srcPort: "", destPort: "", details: "/tmp/.hidden/runme.sh" },
+    { id: 22, timestamp: "Oct 09 01:09:33", host: "fw01", service: "kernel", action: "ACCEPT, from another device", source: "192.168.1.10", dest: "198.51.100.44", protocol: "TCP", srcPort: "49832", destPort: "8080", details: "data exfil pattern" },
+    { id: 23, timestamp: "Oct 09 01:10:41", host: "dbsrv02", service: "systemd", action: "Created user", source: "", dest: "", protocol: "", srcPort: "", destPort: "", details: "backup1" },
+    { id: 24, timestamp: "Oct 09 01:12:56", host: "fw01", service: "kernel", action: "DROP", source: "203.0.113.44", dest: "192.168.1.10", protocol: "TCP", srcPort: "50522", destPort: "3389", details: "" },
+    { id: 25, timestamp: "Oct 09 01:15:32", host: "websrv02", service: "httpd", action: "POST", source: "192.168.1.10", dest: "", protocol: "HTTP", srcPort: "", destPort: "80", details: "/upload.php 500 0" },
+    { id: 26, timestamp: "Oct 09 01:16:04", host: "fw01", service: "kernel", action: "ACCEPT", source: "192.168.1.10", dest: "198.51.100.44", protocol: "TCP", srcPort: "49833", destPort: "8080", details: "persistence beacon" },
+    { id: 27, timestamp: "Oct 09 01:17:49", host: "app01", service: "CRON", action: "From another source", source: "", dest: "", protocol: "", srcPort: "", destPort: "", details: "/tmp/.hidden/runme.sh" },
+    { id: 28, timestamp: "Oct 09 01:20:10", host: "fw01", service: "kernel", action: "ACCEPT", source: "192.168.1.45", dest: "192.168.1.10", protocol: "TCP", srcPort: "54111", destPort: "443", details: "" },
+    { id: 29, timestamp: "Oct 09 01:23:39", host: "dbsrv01", service: "systemd", action: "Finished", source: "", dest: "", protocol: "", srcPort: "", destPort: "", details: "hourly data sync" },
+    { id: 30, timestamp: "Oct 09 01:26:11", host: "websrv01", service: "httpd", action: "GET", source: "", dest: "", protocol: "HTTP", srcPort: "", destPort: "80", details: "/api/v1/health 200 421" },
+    { id: 31, timestamp: "Oct 09 01:29:52", host: "app01", service: "systemd", action: "Completed", source: "", dest: "", protocol: "", srcPort: "", destPort: "", details: "scheduled cleanup" },
+    { id: 32, timestamp: "Oct 09 01:31:10", host: "fw01", service: "kernel", action: "ACCEPT", source: "192.168.1.12", dest: "172.217.10.14", protocol: "TCP", srcPort: "50513", destPort: "443", details: "" },
+    { id: 33, timestamp: "Oct 09 01:34:20", host: "fw01", service: "kernel", action: "DROP", source: "10.0.0.250", dest: "192.168.1.10", protocol: "ICMP", srcPort: "", destPort: "", details: "TYPE=8 CODE=0" },
+    { id: 34, timestamp: "Oct 09 01:36:51", host: "websrv02", service: "httpd", action: "GET", source: "", dest: "", protocol: "HTTP", srcPort: "", destPort: "80", details: "/reports 200 2031" },
+    { id: 35, timestamp: "Oct 09 01:40:13", host: "mail01", service: "postfix/smtpd", action: "connect", source: "192.168.1.15", dest: "", protocol: "SMTP", srcPort: "", destPort: "25", details: "" },
+    { id: 36, timestamp: "Oct 09 01:42:59", host: "mail01", service: "postfix/smtpd", action: "disconnect", source: "192.168.1.15", dest: "", protocol: "SMTP", srcPort: "", destPort: "25", details: "" },
+    { id: 37, timestamp: "Oct 09 01:45:33", host: "fw01", service: "kernel", action: "ACCEPT", source: "192.168.1.45", dest: "172.217.14.110", protocol: "TCP", srcPort: "50222", destPort: "443", details: "" },
+    { id: 38, timestamp: "Oct 09 02:00:01", host: "websrv02", service: "httpd", action: "GET", source: "192.168.1.50", dest: "", protocol: "HTTP", srcPort: "", destPort: "80", details: "/home.html 200 1582" },
+    { id: 39, timestamp: "Oct 09 02:01:22", host: "fw01", service: "kernel", action: "ACCEPT", source: "192.168.1.20", dest: "192.168.1.10", protocol: "TCP", srcPort: "52022", destPort: "443", details: "" },
+    { id: 40, timestamp: "Oct 09 02:03:41", host: "dbsrv02", service: "systemd", action: "Started", source: "", dest: "", protocol: "", srcPort: "", destPort: "", details: "nightly backup" },
+    { id: 41, timestamp: "Oct 09 02:05:12", host: "app01", service: "nginx", action: "GET", source: "", dest: "", protocol: "HTTP", srcPort: "", destPort: "80", details: "/dashboard 200 1203" },
+    { id: 42, timestamp: "Oct 09 02:07:44", host: "websrv01", service: "httpd", action: "GET", source: "192.168.1.55", dest: "", protocol: "HTTP", srcPort: "", destPort: "80", details: "/api/v2/status 200 342" },
+    { id: 43, timestamp: "Oct 09 02:09:55", host: "fw01", service: "kernel", action: "DROP", source: "203.0.113.21", dest: "192.168.1.10", protocol: "TCP", srcPort: "54322", destPort: "22", details: "" },
+    { id: 44, timestamp: "Oct 09 02:11:22", host: "app01", service: "CRON", action: "CMD", source: "", dest: "", protocol: "", srcPort: "", destPort: "", details: "/usr/local/bin/cleanup.sh" },
+    { id: 45, timestamp: "Oct 09 02:13:33", host: "websrv02", service: "sshd", action: "Failed password", source: "203.0.113.21", dest: "", protocol: "SSH", srcPort: "50422", destPort: "22", details: "for invalid user guest" },
+    { id: 46, timestamp: "Oct 09 02:15:11", host: "dbsrv01", service: "systemd", action: "Created", source: "", dest: "", protocol: "", srcPort: "", destPort: "", details: "temporary log archive" },
+    { id: 47, timestamp: "Oct 09 02:16:47", host: "fw01", service: "kernel", action: "From another device", source: "192.168.1.10", dest: "198.51.100.44", protocol: "TCP", srcPort: "49834", destPort: "8080", details: "unusual outbound" },
+    { id: 48, timestamp: "Oct 09 02:18:21", host: "app01", service: "systemd", action: "Unexpected process", source: "", dest: "", protocol: "", srcPort: "", destPort: "", details: "/tmp/.hidden/script.sh" },
+    { id: 49, timestamp: "Oct 09 02:20:44", host: "mail01", service: "postfix/smtpd", action: "connect", source: "192.168.1.16", dest: "", protocol: "SMTP", srcPort: "", destPort: "25", details: "" },
+    { id: 50, timestamp: "Oct 09 02:22:59", host: "websrv02", service: "httpd", action: "GET", source: "", dest: "", protocol: "HTTP", srcPort: "", destPort: "80", details: "/login 200 1043" },
+    { id: 51, timestamp: "Oct 09 02:24:12", host: "fw01", service: "kernel", action: "DROP", source: "203.0.113.44", dest: "192.168.1.10", protocol: "TCP", srcPort: "50523", destPort: "3389", details: "" },
+    { id: 52, timestamp: "Oct 09 02:26:30", host: "dbsrv02", service: "sshd", action: "Accepted password", source: "192.168.1.50", dest: "", protocol: "SSH", srcPort: "51520", destPort: "22", details: "for admin" },
+    { id: 53, timestamp: "Oct 09 02:28:11", host: "app01", service: "nginx", action: "POST", source: "", dest: "", protocol: "HTTP", srcPort: "", destPort: "80", details: "/upload.php 500 0" },
+    { id: 54, timestamp: "Oct 09 02:29:59", host: "websrv01", service: "httpd", action: "GET", source: "192.168.1.45", dest: "", protocol: "HTTP", srcPort: "", destPort: "80", details: "/api/v1/stats 200 218" },
+    { id: 55, timestamp: "Oct 09 02:31:40", host: "fw01", service: "kernel", action: "ACCEPT", source: "192.168.1.10", dest: "198.51.100.44", protocol: "TCP", srcPort: "49835", destPort: "8080", details: "persistence beacon" },
+    { id: 56, timestamp: "Oct 09 02:33:11", host: "app01", service: "CRON", action: "CMD", source: "", dest: "", protocol: "", srcPort: "", destPort: "", details: "/tmp/.hidden/runme.sh" },
+    { id: 57, timestamp: "Oct 09 02:34:52", host: "websrv02", service: "httpd", action: "GET", source: "", dest: "", protocol: "HTTP", srcPort: "", destPort: "80", details: "/reports 200 2041" },
+    { id: 58, timestamp: "Oct 09 02:36:31", host: "mail01", service: "postfix/smtpd", action: "disconnect", source: "192.168.1.16", dest: "", protocol: "SMTP", srcPort: "", destPort: "25", details: "" },
+    { id: 59, timestamp: "Oct 09 02:38:10", host: "fw01", service: "kernel", action: "ACCEPT", source: "192.168.1.45", dest: "172.217.14.111", protocol: "TCP", srcPort: "50223", destPort: "443", details: "" },
+    { id: 60, timestamp: "Oct 09 02:40:55", host: "dbsrv01", service: "systemd", action: "Completed", source: "", dest: "", protocol: "", srcPort: "", destPort: "", details: "hourly data sync" },
+    { id: 61, timestamp: "Oct 09 02:42:31", host: "websrv01", service: "httpd", action: "GET", source: "", dest: "", protocol: "HTTP", srcPort: "", destPort: "80", details: "/api/v2/health 200 422" },
+    { id: 62, timestamp: "Oct 09 02:44:17", host: "fw01", service: "kernel", action: "DROP", source: "10.0.0.251", dest: "192.168.1.10", protocol: "ICMP", srcPort: "", destPort: "", details: "TYPE=8 CODE=0" },
+    { id: 63, timestamp: "Oct 09 02:45:33", host: "app01", service: "systemd", action: "Completed", source: "", dest: "", protocol: "", srcPort: "", destPort: "", details: "scheduled maintenance" },
+    { id: 64, timestamp: "Oct 09 02:46:12", host: "mail01", service: "postfix/smtpd", action: "connect", source: "192.168.1.17", dest: "", protocol: "SMTP", srcPort: "", destPort: "25", details: "" },
+    { id: 65, timestamp: "Oct 09 02:47:59", host: "websrv02", service: "httpd", action: "GET", source: "", dest: "", protocol: "HTTP", srcPort: "", destPort: "80", details: "/dashboard 200 1211" },
+    { id: 66, timestamp: "Oct 09 02:49:30", host: "fw01", service: "kernel", action: "ACCEPT", source: "192.168.1.46", dest: "172.217.14.112", protocol: "TCP", srcPort: "50224", destPort: "443", details: "" },
+    { id: 67, timestamp: "Oct 09 02:50:47", host: "dbsrv02", service: "systemd", action: "Finished", source: "", dest: "", protocol: "", srcPort: "", destPort: "", details: "temporary backup" }
 ];
+
+// SIMPLE FIX: Check URL parameters for reset or use sessionStorage instead
+let attemptsLeft = 3;
+let gameCompleted = false;
+
+// Check if we should reset everything (new session)
+if (!sessionStorage.getItem('logSessionStarted')) {
+  // New session - clear any old localStorage and start fresh
+  localStorage.removeItem('logAttempts');
+  localStorage.removeItem('logCompleted');
+  sessionStorage.setItem('logSessionStarted', 'true');
+} else {
+  // Continuing session - load from localStorage
+  const storedAttempts = localStorage.getItem('logAttempts');
+  const storedCompleted = localStorage.getItem('logCompleted');
+  
+  if (storedAttempts !== null) {
+    attemptsLeft = parseInt(storedAttempts);
+  }
+  if (storedCompleted !== null) {
+    gameCompleted = storedCompleted === 'true';
+  }
+}
+
+// If URL has reset parameter, reset everything
+if (window.location.search.includes('reset=true')) {
+  attemptsLeft = 3;
+  gameCompleted = false;
+  localStorage.removeItem('logAttempts');
+  localStorage.removeItem('logCompleted');
+  sessionStorage.removeItem('logSessionStarted');
+}
+
+console.log('Starting with attempts:', attemptsLeft, 'completed:', gameCompleted);
 
 const logTableBody = document.getElementById('logTableBody');
 const timerElement = document.getElementById('timer');
@@ -227,201 +295,222 @@ const scoreDisplay = document.getElementById('scoreDisplay');
 const resultDetails = document.getElementById('resultDetails');
 const resultTitle = document.getElementById('resultTitle');
 const sabotageWarning = document.getElementById('sabotageWarning');
+const disabledOverlay = document.getElementById('disabledOverlay');
 
 let selectedEntries = [];
 let timeLeft = 3*60;
 let timerInterval;
-let attemptsLeft = 3;
-let gameCompleted = false;
-let sabotaged = false;
 let progress = 0;
 
 // Create binary rain
 function createBinaryRain() {
     const container = document.getElementById('binaryRain');
     const binaryChars = '01';
-    const count = 30; // Not too many
+    const count = 30;
     
     for (let i = 0; i < count; i++) {
         const digit = document.createElement('div');
         digit.className = 'binary-digit';
         digit.textContent = binaryChars[Math.floor(Math.random() * binaryChars.length)];
         digit.style.left = Math.random() * 100 + 'vw';
-        digit.style.animationDuration = (3 + Math.random() * 5) + 's'; // Slower fall
+        digit.style.animationDuration = (3 + Math.random() * 5) + 's';
         digit.style.animationDelay = Math.random() * 2 + 's';
-        digit.style.opacity = Math.random() * 0.4 + 0.1; // Subtle
+        digit.style.opacity = Math.random() * 0.4 + 0.1;
         container.appendChild(digit);
     }
 }
 
 // Initialize table
 function initializeTable(){
-  logTableBody.innerHTML='';
-  logData.forEach(entry=>{
-    const row=document.createElement('tr');
-    row.dataset.id=entry.id;
-    row.innerHTML=`<td class="id-cell">${entry.id}</td>
-    <td class="timestamp-cell">${entry.timestamp}</td>
-    <td class="host-cell">${entry.host}</td>
-    <td class="service-cell">${entry.service}</td>
-    <td class="action-cell">${entry.action}</td>
-    <td class="source-cell">${entry.source}</td>
-    <td class="dest-cell">${entry.dest}</td>
-    <td class="protocol-cell">${entry.protocol}</td>
-    <td class="port-cell">${entry.srcPort}</td>
-    <td class="port-cell">${entry.destPort}</td>
-    <td class="details-cell">${entry.details}</td>`;
-    row.addEventListener('click',()=>toggleSelection(entry.id,row));
-    logTableBody.appendChild(row);
-  });
+    logTableBody.innerHTML='';
+    logData.forEach(entry=>{
+        const row=document.createElement('tr');
+        row.dataset.id=entry.id;
+        row.innerHTML=`<td class="id-cell">${entry.id}</td>
+        <td class="timestamp-cell">${entry.timestamp}</td>
+        <td class="host-cell">${entry.host}</td>
+        <td class="service-cell">${entry.service}</td>
+        <td class="action-cell">${entry.action}</td>
+        <td class="source-cell">${entry.source}</td>
+        <td class="dest-cell">${entry.dest}</td>
+        <td class="protocol-cell">${entry.protocol}</td>
+        <td class="port-cell">${entry.srcPort}</td>
+        <td class="port-cell">${entry.destPort}</td>
+        <td class="details-cell">${entry.details}</td>`;
+        row.addEventListener('click',()=>toggleSelection(entry.id,row));
+        logTableBody.appendChild(row);
+    });
 }
 
 // Update progress
 function updateProgress(){
-  progressElement.style.width=`${progress}%`;
-  progressText.textContent=`Progress: ${progress}%`;
+    progressElement.style.width=`${progress}%`;
+    progressText.textContent=`Progress: ${progress}%`;
 }
 
 // Selection toggle
 function toggleSelection(id,row){
-  if(gameCompleted) return;
-  const index=selectedEntries.indexOf(id);
-  if(index===-1){
-    selectedEntries.push(id);
-    row.classList.add('selected');
-  } else {
-    selectedEntries.splice(index,1);
-    row.classList.remove('selected');
-  }
-  submitBtn.disabled=selectedEntries.length===0;
-  
-  // Update progress based on correct selections
-  const correctSelections = selectedEntries.filter(id => suspiciousEntries.includes(id)).length;
-  progress = (correctSelections / 5) * 100;
-  updateProgress();
+    if(gameCompleted || attemptsLeft === 0) return;
+    const index=selectedEntries.indexOf(id);
+    if(index===-1){
+        selectedEntries.push(id);
+        row.classList.add('selected');
+    } else {
+        selectedEntries.splice(index,1);
+        row.classList.remove('selected');
+    }
+    submitBtn.disabled=selectedEntries.length===0;
+    
+    const correctSelections = selectedEntries.filter(id => suspiciousEntries.includes(id)).length;
+    progress = (correctSelections / 5) * 100;
+    updateProgress();
 }
 
 // Timer
 function startTimer(){
-  timerInterval=setInterval(()=>{
-    timeLeft--;
-    const minutes=Math.floor(timeLeft/60);
-    const seconds=timeLeft%60;
-    timerElement.textContent=`${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
-    if(timeLeft<=0){
-      clearInterval(timerInterval);
-      submitAnswers();
-    }
-  },1000);
+    timerInterval=setInterval(()=>{
+        timeLeft--;
+        const minutes=Math.floor(timeLeft/60);
+        const seconds=timeLeft%60;
+        timerElement.textContent=`${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+        if(timeLeft<=0){
+            clearInterval(timerInterval);
+            submitAnswers();
+        }
+    },1000);
+}
+
+// Disable all interactions
+function disableAllInteractions() {
+    submitBtn.disabled = true;
+    resetBtn.disabled = true;
+    
+    // Disable all table rows
+    document.querySelectorAll('tbody tr').forEach(row => {
+        row.style.pointerEvents = 'none';
+        row.classList.add('disabled');
+    });
+    
+    disabledOverlay.style.display = 'flex';
+    clearInterval(timerInterval);
+}
+
+// Reset function for the overlay button
+function resetAllProgress() {
+    localStorage.removeItem('logAttempts');
+    localStorage.removeItem('logCompleted');
+    sessionStorage.removeItem('logSessionStarted');
+    location.reload();
 }
 
 // Submit
 function submitAnswers(){
-  if(gameCompleted) return;
-  clearInterval(timerInterval);
-  gameCompleted=true;
-  
-  attemptsLeft--;
-  attemptsElement.textContent = attemptsLeft;
-  
-  let correct=selectedEntries.filter(id=>suspiciousEntries.includes(id)).length;
-  scoreDisplay.textContent=`Your Score: ${correct}/5`;
-  
-  if(correct === 5){
-    resultTitle.textContent = "✅ Access Granted!";
-    resultDetails.innerHTML='<p style="color:#155724;font-weight:bold;">Excellent! You found all suspicious activities!</p>';
-    setTimeout(()=>{window.location.href='Challenge 1.5.html';},2000);
-  } else {
-    if(attemptsLeft > 0){
-      resultTitle.textContent = "❌ Try Again";
-      resultDetails.innerHTML=`<p style="color:#721c24;">You found ${correct}/5 suspicious activities. ${attemptsLeft} attempt(s) remaining.</p>
-      <button onclick="retry()" style="margin-top:10px; padding:10px 20px; background:green; color:white; border:none; border-radius:5px; cursor:pointer;">Try Again</button>`;
+    if(gameCompleted || attemptsLeft === 0) return;
+    clearInterval(timerInterval);
+    
+    let correct=selectedEntries.filter(id=>suspiciousEntries.includes(id)).length;
+    scoreDisplay.textContent=`Your Score: ${correct}/5`;
+    
+    if(correct === 5){
+        // SUCCESS
+        gameCompleted = true;
+        resultTitle.textContent = "✅ Access Granted!";
+        resultDetails.innerHTML='<p style="color:#155724;font-weight:bold;">Excellent! You found all suspicious activities!</p>';
+        localStorage.setItem('logCompleted', 'true');
+        setTimeout(()=>{
+            localStorage.removeItem('logAttempts');
+            localStorage.removeItem('logCompleted');
+            sessionStorage.removeItem('logSessionStarted');
+            window.location.href='Challenge 1.5.html';
+        },2000);
     } else {
-      resultTitle.textContent = "🚫 Access Denied";
-      resultDetails.innerHTML='<p style="color:#721c24;">No attempts remaining. Training failed.</p>';
-      submitBtn.disabled = true;
+        // FAILED
+        attemptsLeft--;
+        localStorage.setItem('logAttempts', attemptsLeft);
+        
+        if(attemptsLeft > 0){
+            resultTitle.textContent = "❌ Try Again";
+            resultDetails.innerHTML=`<p style="color:#721c24;">You found ${correct}/5 suspicious activities. ${attemptsLeft} attempt(s) remaining.</p>
+            <button onclick="retry()" style="margin-top:10px; padding:10px 20px; background:green; color:white; border:none; border-radius:5px; cursor:pointer;">Try Again</button>`;
+        } else {
+            resultTitle.textContent = "🚫 Access Denied";
+            resultDetails.innerHTML='<p style="color:#721c24;">No attempts remaining. Training failed.</p>';
+            disableAllInteractions();
+        }
     }
-  }
-  
-  resultsElement.style.display='block';
-  
-  // Highlight correct/incorrect
-  document.querySelectorAll('tr').forEach(row=>{
-    const id=parseInt(row.dataset.id);
-    if(suspiciousEntries.includes(id)){row.classList.add('correct');}
-    if(selectedEntries.includes(id)&&!suspiciousEntries.includes(id)){row.classList.add('incorrect');}
-  });
+    
+    resultsElement.style.display='block';
+    updateUI();
+    
+    document.querySelectorAll('tr').forEach(row=>{
+        const id=parseInt(row.dataset.id);
+        if(suspiciousEntries.includes(id)){row.classList.add('correct');}
+        if(selectedEntries.includes(id)&&!suspiciousEntries.includes(id)){row.classList.add('incorrect');}
+    });
 }
 
 // Retry function
 function retry(){
-  selectedEntries=[];
-  gameCompleted=false;
-  progress = 0;
-  updateProgress();
-  resultsElement.style.display='none';
-  document.querySelectorAll('tr').forEach(row=>{
-    row.classList.remove('selected','correct','incorrect');
-  });
-  submitBtn.disabled=true;
-  timeLeft = 5*60;
-  timerElement.textContent = "05:00";
-  startTimer();
+    selectedEntries=[];
+    gameCompleted=false;
+    progress = 0;
+    updateProgress();
+    resultsElement.style.display='none';
+    document.querySelectorAll('tr').forEach(row=>{
+        row.classList.remove('selected','correct','incorrect','disabled');
+        row.style.pointerEvents = 'auto';
+    });
+    submitBtn.disabled=true;
+    timeLeft = 5*60;
+    timerElement.textContent = "05:00";
+    startTimer();
+    updateUI();
 }
 
 // Reset
 function resetSelection(){
-  if(!gameCompleted){
-    selectedEntries=[];
-    submitBtn.disabled=true;
-    progress = 0;
-    updateProgress();
-    document.querySelectorAll('tr').forEach(row=>row.classList.remove('selected'));
-  }
-}
-
-// Shuffle table for sabotage
-function shuffleTable(){
-  const nonSuspicious = logData.filter(d=>!suspiciousEntries.includes(d.id));
-  for(let i=nonSuspicious.length-1;i>0;i--){
-    const j=Math.floor(Math.random()*(i+1));
-    [nonSuspicious[i],nonSuspicious[j]]=[nonSuspicious[j],nonSuspicious[i]];
-  }
-  
-  const shuffledData=[];
-  let nsIndex=0;
-  for(let i=0;i<logData.length;i++){
-    if(suspiciousEntries.includes(logData[i].id)){
-      shuffledData.push(logData[i]);
-    }else{
-      shuffledData.push(nonSuspicious[nsIndex]);
-      nsIndex++;
+    if(!gameCompleted && attemptsLeft > 0){
+        selectedEntries=[];
+        submitBtn.disabled=true;
+        progress = 0;
+        updateProgress();
+        document.querySelectorAll('tr').forEach(row=>row.classList.remove('selected'));
     }
-  }
-  
-  logData.splice(0,logData.length,...shuffledData);
-  initializeTable();
-  
-  sabotaged = true;
-  sabotageWarning.style.display = 'block';
 }
 
-// Check for sabotage trigger
-function checkForSabotage() {
-  if (localStorage.getItem('sabotage') === 'true') {
-    shuffleTable();
-    localStorage.removeItem('sabotage');
-  }
+// Update UI
+function updateUI() {
+    attemptsElement.textContent = attemptsLeft;
+    submitBtn.disabled = gameCompleted || attemptsLeft <= 0 || selectedEntries.length === 0;
+    resetBtn.disabled = gameCompleted || attemptsLeft <= 0;
+}
+
+// Check initial state
+function checkInitialState() {
+    if (gameCompleted) {
+        disableAllInteractions();
+        resultsElement.style.display = 'block';
+        resultTitle.textContent = "✅ Challenge Completed";
+        scoreDisplay.textContent = "Your Score: 5/5";
+        resultDetails.innerHTML = '<p style="color:#155724;font-weight:bold;">Challenge already completed!</p>';
+    } else if (attemptsLeft <= 0) {
+        disableAllInteractions();
+        resultsElement.style.display = 'block';
+        resultTitle.textContent = "🚫 Access Denied";
+        scoreDisplay.textContent = "Your Score: 0/5";
+        resultDetails.innerHTML = '<p style="color:#721c24;">No attempts remaining.</p>';
+    } else {
+        // Game is active - start normally
+        startTimer();
+    }
 }
 
 // Initialize everything
 createBinaryRain();
 initializeTable();
 updateProgress();
-startTimer();
-
-// Check for sabotage every second
-setInterval(checkForSabotage, 1000);
+updateUI();
+checkInitialState();
 
 submitBtn.addEventListener('click',submitAnswers);
 resetBtn.addEventListener('click',resetSelection);

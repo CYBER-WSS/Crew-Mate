@@ -15,6 +15,7 @@
   }
   html,body{height:100%;margin:0;font-family:'monospace'; background: radial-gradient(1200px 600px at 10% 10%,black), var(--bg); color:var(--muted); -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;}
 
+  /* Centering container */
   .stage{
     min-height:100%;
     display:flex;
@@ -26,6 +27,7 @@
     overflow:hidden;
   }
 
+  /* matrix faint background */
   .matrix {
     pointer-events:none;
     position:absolute;
@@ -41,6 +43,7 @@
   }
   @keyframes drift { from{ transform:translateY(0) } to { transform:translateY(-30%) } }
 
+  /* Crewmate-like panel */
   .panel {
     position:relative;
     z-index:2;
@@ -57,6 +60,7 @@
     box-sizing:border-box;
   }
 
+  /* name at the top */
   .name {
     width:100%;
     padding:10px 12px;
@@ -75,8 +79,14 @@
     gap:10px;
   }
 
-  .sub { font-size:12px; color:var(--muted); opacity:0.9; text-align:center; }
+  .sub {
+    font-size:12px;
+    color:var(--muted);
+    opacity:0.9;
+    text-align:center;
+  }
 
+  /* Hacker button (link styled) */
   .hacker-btn{
     display:inline-flex;
     align-items:center;
@@ -99,6 +109,7 @@
   .hacker-btn:focus { outline: 3px solid silver; outline-offset:4px; }
   .hacker-btn:hover { transform: translateY(-4px) scale(1.02); filter:brightness(1.05); box-shadow: 0 14px 40px rgba(0,255,159,0.08); }
 
+  /* small LED bubble */
   .led {
     width:12px;height:12px;border-radius:50%;
     background: linear-gradient(to top, green, lightgreen);
@@ -106,6 +117,7 @@
     flex-shrink:0;
   }
 
+  /* subtle type-line under the name */
   .line {
     height:6px;
     width:70%;
@@ -115,6 +127,7 @@
     margin:4px 0 6px;
   }
 
+  /* "terminal" text area */
   .term {
     width:100%;
     background: rgba(0,0,0,0.18);
@@ -126,14 +139,8 @@
     text-align:left;
   }
 
-  .countdown {
-    margin-top: 10px;
-    font-weight: bold;
-    font-size: 16px;
-    color: var(--accent-2);
-  }
-
-  .label{
+  /* animated typing cursor effect on the button label */
+  .label {
     position:relative;
     display:inline-block;
   }
@@ -150,31 +157,42 @@
   }
   @keyframes blink { 50% { opacity:0 } }
 
+  /* responsive */
   @media (max-width:420px){
     .panel{ width:92%; padding:16px;}
     .name{font-size:18px}
   }
-
   @keyframes fall {
-    0% { top: -20px; opacity:1; }
-    100% { top: 100vh; opacity:0; }
-  }
+  0% { top: -20px; }
+  100% { top: 100vh; }
+}
 
-  .digit {
-    position: absolute;
-    top: -20px;
-    font-size: 16px;
-    text-shadow: 0 0 5px #39ff14, 0 0 10px #39ff14;
-    animation-name: fall;
-    animation-timing-function: linear;
-    animation-iteration-count: infinite;
-  }
+.binary {
+  position: absolute;
+  animation: fall 5s linear infinite; /* moves down continuously */
+}
+.digit {
+  position: absolute;
+  top: -20px;
+  font-size: 16px;
+  text-shadow: 0 0 5px #39ff14, 0 0 10px #39ff14; /* neon glow */
+  animation-name: fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+/* Falling animation */
+@keyframes fall {
+  0% { top: -20px; opacity: 1; }
+  100% { top: 100vh; opacity: 0; }
+}
 
 </style>
 </head>
 <body>
   <div class="stage" role="main" aria-label="Crewmate hacker panel">
     <div class="matrix" aria-hidden="true">
+      <!-- decorative text only -->
       <pre style="margin:0;line-height:1.25;opacity:.6;">
 01000011 01110010 01100101 01110111 01101101 01100001 01110100 01100101
 0x43 0x72 0x65 0x77 0x6D 0x61 0x74 0x65
@@ -183,80 +201,66 @@
     </div>
 
     <div class="panel" role="region" aria-label="Crewmate control card">
+      <!-- Change "YourName" below to the displayed name -->
       <div class="name" id="crewName">Crewmate</div>
 
       <div class="line" aria-hidden="true"></div>
 
       <div class="term" aria-hidden="true">
-        Status: <strong style="color:var(--accent)">Online</strong> • Task 2: <code style="color:var(--accent-2)">#42</code><br>
+        Status: <strong style="color:var(--accent)">Online</strong> • Task 1: <code style="color:var(--accent-2)"></code><br>
         Role: <span style="color:var(--muted)">Crewmate</span> — secure link below
       </div>
 
-      <a id="hackerBtn" class="hacker-btn" href="CHALLENGE-2.html" role="button" aria-label="Enter node">
+      <!-- Hacker-style button that navigates -->
+      <a id="hackerBtn" class="hacker-btn" href="Crewmate.html" role="button" aria-label="Enter node">
         <span class="led" aria-hidden="true"></span>
-        <span class="label">TASK 2</span>
+        <span class="label">TASK 1</span>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="opacity:.95">
           <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </a>
-
-      <div id="countdown" class="countdown" aria-live="polite"></div>
     </div>
   </div>
 
 <script>
-(function(){
-  const btn = document.getElementById('hackerBtn');
-  const countdownEl = document.getElementById('countdown');
-  let countdownInterval;
+  // — Small script for navigation + small pre-nav flash
+  (function(){
+    const btn = document.getElementById('hackerBtn');
 
-  btn.addEventListener('click', function(e){
-    e.preventDefault(); // stop immediate navigation
-
-    btn.style.transition = 'transform .08s ease, box-shadow .08s ease';
-    btn.style.transform = 'scale(.98)';
-
-    let timeLeft =0; // 5 minutes in seconds
-
-    countdownEl.textContent = formatTime(timeLeft);
-
-    countdownInterval = setInterval(() => {
-      timeLeft--;
-      countdownEl.textContent = formatTime(timeLeft);
-      if(timeLeft <= 0){
-        clearInterval(countdownInterval);
+    btn.addEventListener('click', function(e){
+      // we intercept to show a tiny visual feedback (accessible & fast)
+      e.preventDefault();
+      btn.style.transition = 'transform .08s ease, box-shadow .08s ease';
+      btn.style.transform = 'scale(.98)';
+      setTimeout(()=> {
         const target = btn.getAttribute('href');
+        // navigate in same tab:
         window.location.href = target;
-      }
-    }, 1000);
-  });
+        // if you prefer open in new tab, replace with:
+        // window.open(target, '_blank', 'noopener');
+      }, 120);
+    });
 
-  function formatTime(seconds){
-    const m = Math.floor(seconds / 60).toString().padStart(2,'0');
-    const s = (seconds % 60).toString().padStart(2,'0');
-    return `Redirecting in ${m}:${s}`;
-  }
+    // optional: change name programmatically from URL param ?name=Foo
+    const params = new URLSearchParams(location.search);
+    if(params.has('name')){
+      const n = params.get('name').slice(0,20);
+      document.getElementById('crewName').textContent = '🚀 ' + n;
+    }
+  })();
 
-  // optional: change name programmatically from URL param ?name=Foo
-  const params = new URLSearchParams(location.search);
-  if(params.has('name')){
-    const n = params.get('name').slice(0,20);
-    document.getElementById('crewName').textContent = '🚀 ' + n;
-  }
-})();
-
-// falling binary effect
-const digitCount = 200;
-const screenWidth = window.innerWidth;
-for (let i = 0; i < digitCount; i++) {
-  const span = document.createElement('span');
-  span.className = 'digit';
-  span.style.left = Math.random() * screenWidth + 'px';
-  span.style.animationDuration = (3 + Math.random() * 5) + 's';
-  span.style.animationDelay = Math.random() * 5 + 's';
-  span.textContent = Math.random() > 0.5 ? '0' : '1';
-  document.body.appendChild(span);
-}
+  const digitCount = 200; // number of digits
+    const screenWidth = window.innerWidth;
+    
+    for (let i = 0; i < digitCount; i++) {
+      const span = document.createElement('span');
+      span.className = 'digit';
+      span.style.left = Math.random() * screenWidth + 'px';           // random horizontal position
+      span.style.animationDuration = (3 + Math.random() * 5) + 's';   // random speed
+      span.style.animationDelay = Math.random() * 5 + 's';            // random start time
+      span.textContent = Math.random() > 0.5 ? '0' : '1';             // random 0 or 1
+      document.body.appendChild(span);
+    }
 </script>
 </body>
 </html>

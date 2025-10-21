@@ -23,9 +23,30 @@
     to { transform: translateY(100vh); }
   }
 
+  /* Disabled Overlay */
+  .disabled-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.95);
+    z-index: 2000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: var(--danger);
+    font-size: 24px;
+    font-weight: bold;
+    text-align: center;
+    display: none;
+    flex-direction: column;
+  }
+
   #taskbar { background: rgba(10,10,10,0.95); color: var(--neon); padding: 10px 14px; display:flex; gap:12px; align-items:center; border-bottom:1px solid rgba(0,255,150,0.06); position: fixed; top:0; left:0; width:100%; box-sizing:border-box; z-index:1000; }
   #taskbar > div { display:flex; gap:8px; align-items:center; font-size:14px; }
   #taskbar button { background:#07120a; color:var(--neon); border:1px solid rgba(0,255,150,0.12); border-radius:6px; padding:6px 10px; cursor:pointer; font-weight:700; }
+  #taskbar button:disabled { opacity: 0.3; cursor: not-allowed; }
   main { padding: 106px 20px 40px; max-width:1100px; margin:0 auto; position: relative; z-index: 2; }
   h1{ text-align:center; color:var(--neon); margin:6px 0 8px; }
   p{ text-align:center; color:var(--muted); margin:0 0 18px; }
@@ -34,6 +55,7 @@
   .column h2{ text-align:center; margin:6px 0 10px; color:var(--neon); font-size:16px; }
   #emails{ flex-basis:100%; margin-top:20px; display:flex; flex-wrap:wrap; gap:10px; justify-content:center; transition:all 300ms ease; }
   .mail{ background: rgba(15,20,15,0.95); border-radius:8px; padding:10px; color:var(--neon); min-width:260px; max-width:360px; cursor:grab; box-shadow:0 6px 18px rgba(0,255,150,0.02); border-left:3px solid rgba(0,255,150,0.05); user-select:none; transition: transform 300ms ease, opacity 200ms ease; }
+  .mail.disabled { cursor: not-allowed; opacity: 0.4; }
   .mail.dragging{ opacity:0.6; transform:scale(1.02); }
   #resultDisplay{ margin-top:16px; text-align:center; color:var(--neon); font-weight:700; font-size:16px; min-height:36px; }
   .msg-error{ color:#ff7070; font-weight:700; margin-top:8px; }
@@ -78,6 +100,14 @@
   <!-- Binary Rain Background -->
   <div class="binary-rain" id="binaryRain"></div>
 
+  <!-- Disabled Overlay -->
+  <div class="disabled-overlay" id="disabledOverlay">
+    <div style="font-size: 32px; margin-bottom: 20px;">🚫 ACCESS DENIED</div>
+    <div style="font-size: 18px;">Maximum attempts reached</div>
+    <div style="font-size: 14px; margin-top: 10px; color: #ff8888;">All interactions disabled</div>
+    <button onclick="resetAllProgress()" style="margin-top:20px; padding:10px 20px; background:#ff4444; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">Reset All Progress</button>
+  </div>
+
   <div id="taskbar" role="region" aria-label="Controls">
     <div>Time: <span id="timer">05:00</span></div>
     <div class="progress-container">
@@ -113,14 +143,46 @@
 <script>
 /* CONFIG */
 const redirectUrl = "inter.html";
+
+// SIMPLE FIX: Check URL parameters for reset or use sessionStorage instead
 let attemptsLeft = 3;
 let gameCompleted = false;
+
+// Check if we should reset everything (new session)
+if (!sessionStorage.getItem('phishingSessionStarted')) {
+  // New session - clear any old localStorage and start fresh
+  localStorage.removeItem('phishingAttempts');
+  localStorage.removeItem('phishingCompleted');
+  sessionStorage.setItem('phishingSessionStarted', 'true');
+} else {
+  // Continuing session - load from localStorage
+  const storedAttempts = localStorage.getItem('phishingAttempts');
+  const storedCompleted = localStorage.getItem('phishingCompleted');
+  
+  if (storedAttempts !== null) {
+    attemptsLeft = parseInt(storedAttempts);
+  }
+  if (storedCompleted !== null) {
+    gameCompleted = storedCompleted === 'true';
+  }
+}
+
+// If URL has reset parameter, reset everything
+if (window.location.search.includes('reset=true')) {
+  attemptsLeft = 3;
+  gameCompleted = false;
+  localStorage.removeItem('phishingAttempts');
+  localStorage.removeItem('phishingCompleted');
+  sessionStorage.removeItem('phishingSessionStarted');
+}
+
+console.log('Starting with attempts:', attemptsLeft, 'completed:', gameCompleted);
 
 /* EMAIL DATA */
 const emails = [
   {id:1, text: 'Subject: Invoice INV-2025-774 — Immediate payment required', type:'phishing'},
   {id:2, text: 'Subject: Action Required — Your account password expires today', type:'phishing'},
-  {id:3, text: 'Subject: CONGRATULATIONS — You’ve been selected for $1,000 prize!', type:'phishing'},
+  {id:3, text: 'Subject: CONGRATULATIONS — You\'ve been selected for $1,000 prize!', type:'phishing'},
   {id:4, text: 'Subject: URGENT: New bank details for your upcoming payment to VendorCorp', type:'phishing'},
   {id:5, text: 'Subject: URGENT — Wire transfer request, confidential', type:'phishing'},
   {id:6, text: 'Subject: A document has been shared with you — Project Plan v2', type:'phishing'},
@@ -131,7 +193,7 @@ const emails = [
   {id:11, text: 'Subject: Reminder — Invoice INV-3345 due 15 Oct 2025', type:'real'},
   {id:12, text: 'Subject: Action required — Password expiry for alice.khan@gemsae.com', type:'real'},
   {id:13, text: 'Subject: Regional Merit Scholarship — shortlist notification', type:'real'},
-  {id:14, text: 'Subject: Invitation to panel: “Emerging Technologies in Education” — 10 Nov 2025', type:'real'},
+  {id:14, text: 'Subject: Invitation to panel: "Emerging Technologies in Education" — 10 Nov 2025', type:'real'},
   {id:15, text: 'Subject: Payment received — INV-7812, Ref: PAY-2025-0987', type:'real'},
   {id:16, text: 'Subject: FY2025 Compliance Declaration — please complete by 31 Oct 2025', type:'real'},
   {id:17, text: 'Subject: Quotation for Signage — site visit follow-up & deposit details', type:'real'},
@@ -150,6 +212,7 @@ const resultEl = document.getElementById('resultDisplay');
 const resetBtn = document.getElementById('resetBtn');
 const submitBtn = document.getElementById('submitBtn');
 const sabotageBanner = document.getElementById('sabotageBanner');
+const disabledOverlay = document.getElementById('disabledOverlay');
 
 /* Create Binary Rain */
 function createBinaryRain() {
@@ -256,9 +319,11 @@ function formatMMSS(sec){
 }
 
 function handleTimeUp() {
+  if (attemptsLeft <= 0) return;
+  
   resultEl.innerHTML = `<div class="msg-error">Time's up! ${attemptsLeft-1} attempt(s) remaining.</div>`;
   attemptsLeft--;
-  attemptsLeftEl.textContent = attemptsLeft;
+  localStorage.setItem('phishingAttempts', attemptsLeft);
   if (attemptsLeft <= 0) {
     gameOver();
   } else {
@@ -266,11 +331,45 @@ function handleTimeUp() {
       resetGame();
     }, 3000);
   }
+  updateUI();
+}
+
+/* Disable all interactions */
+function disableAllInteractions() {
+  // Disable buttons
+  submitBtn.disabled = true;
+  resetBtn.disabled = true;
+  
+  // Disable drag and drop for all emails
+  document.querySelectorAll('.mail').forEach(mail => {
+    mail.draggable = false;
+    mail.classList.add('disabled');
+  });
+  
+  // Disable drop zones
+  document.querySelectorAll('.column').forEach(col => {
+    col.style.pointerEvents = 'none';
+    col.style.opacity = '0.5';
+  });
+  
+  // Stop timer
+  clearInterval(timerInterval);
+  
+  // Show disabled overlay
+  disabledOverlay.style.display = 'flex';
+}
+
+// Reset function for the overlay button
+function resetAllProgress() {
+  localStorage.removeItem('phishingAttempts');
+  localStorage.removeItem('phishingCompleted');
+  sessionStorage.removeItem('phishingSessionStarted');
+  location.reload();
 }
 
 /* SUBMIT with 3 attempts limit */
 submitBtn.addEventListener('click', () => {
-  if (gameCompleted) return;
+  if (gameCompleted || attemptsLeft <= 0) return;
   
   submitBtn.disabled = true;
   clearInterval(timerInterval);
@@ -284,6 +383,7 @@ submitBtn.addEventListener('click', () => {
   if(correct === emails.length){
     // SUCCESS
     gameCompleted = true;
+    localStorage.setItem('phishingCompleted', 'true');
     resultEl.innerHTML = `
       <div class="msg-success">🟢 Perfect! All ${correct} correct — proceeding...</div>
       <div style="margin-top:8px; opacity:0.9;">Redirecting in <span id="redirCountdown">3</span> seconds...</div>
@@ -295,13 +395,17 @@ submitBtn.addEventListener('click', () => {
       if(rc) rc.textContent = countdown;
       if(countdown <= 0){
         clearInterval(countdownInterval);
+        // Clear localStorage on success
+        localStorage.removeItem('phishingAttempts');
+        localStorage.removeItem('phishingCompleted');
+        sessionStorage.removeItem('phishingSessionStarted');
         window.location.href = 'Challenge 2.5.html';
       }
     }, 1000);
   } else {
     // FAILED - use attempt
     attemptsLeft--;
-    attemptsLeftEl.textContent = attemptsLeft;
+    localStorage.setItem('phishingAttempts', attemptsLeft);
     
     if(attemptsLeft > 0){
       resultEl.innerHTML = `
@@ -313,6 +417,7 @@ submitBtn.addEventListener('click', () => {
       gameOver();
     }
   }
+  updateUI();
 });
 
 function retryAttempt() {
@@ -320,27 +425,64 @@ function retryAttempt() {
 }
 
 function resetGame() {
-  renderEmails();
-  startTimer();
-  resultEl.textContent = '';
-  submitBtn.disabled = false;
+  if (attemptsLeft > 0 && !gameCompleted) {
+    renderEmails();
+    startTimer();
+    resultEl.textContent = '';
+    submitBtn.disabled = false;
+  }
 }
 
 function gameOver() {
   resultEl.innerHTML = `
     <div class="msg-error">🚫 GAME OVER</div>
-    <div>No attempts remaining.</div>
+    <div>No attempts remaining. All interactions disabled.</div>
   `;
-  submitBtn.disabled = true;
-  clearInterval(timerInterval);
+  disableAllInteractions();
 }
 
 /* RESET */
 resetBtn.addEventListener('click', () => {
-  if (!gameCompleted) {
+  if (!gameCompleted && attemptsLeft > 0) {
     resetGame();
   }
 });
+
+/* Update UI */
+function updateUI() {
+  attemptsLeftEl.textContent = attemptsLeft;
+  submitBtn.disabled = gameCompleted || attemptsLeft <= 0;
+  resetBtn.disabled = gameCompleted || attemptsLeft <= 0;
+}
+
+/* Check initial state */
+function checkInitialState() {
+  if (gameCompleted) {
+    resultEl.innerHTML = `
+      <div class="msg-success">✅ Challenge Already Completed</div>
+      <div style="margin-top:8px;">Redirecting in <span id="redirCountdown">3</span> seconds...</div>
+    `;
+    let countdown = 3;
+    const rc = document.getElementById('redirCountdown');
+    const countdownInterval = setInterval(() => {
+      countdown--;
+      if(rc) rc.textContent = countdown;
+      if(countdown <= 0){
+        clearInterval(countdownInterval);
+        window.location.href = 'Challenge 2.5.html';
+      }
+    }, 1000);
+  } else if (attemptsLeft <= 0) {
+    disableAllInteractions();
+    resultEl.innerHTML = `
+      <div class="msg-error">🚫 GAME OVER</div>
+      <div>No attempts remaining. All interactions disabled.</div>
+    `;
+  } else {
+    // Game is active - start normally
+    startTimer();
+  }
+}
 
 /* SABOTAGE SYSTEM */
 let lastSabotageTs = localStorage.getItem('lastHandledSabotage') || '0';
@@ -410,7 +552,8 @@ window.addEventListener('DOMContentLoaded', () => {
 /* INITIALIZE */
 createBinaryRain();
 renderEmails();
-startTimer();
+updateUI();
+checkInitialState();
 
 /* Accessibility */
 function makeFocusable(){ 
