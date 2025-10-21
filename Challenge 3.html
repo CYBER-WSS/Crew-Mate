@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Firewall Construction</title>
+<style>
+* {box-sizing: border-box;margin:0;padding:0;}
+body {font-family: monospace;color: chartreuse;background-color: black;padding: 20px;line-height:1.6;overflow-x: hidden;position: relative;}
+.container {max-width: 1200px;margin:0 auto;background-color:black;border-radius:8px;overflow:hidden;position: relative;z-index: 2;}
+
+/* Binary Rain */
+.binary-rain {position: fixed;top: 0;left: 0;width: 100%;height: 100%;pointer-events: none;z-index: 1;opacity: 0.3;}
+.binary-digit {position: absolute;color: chartreuse;font-size: 14px;font-family: monospace;animation: fall linear infinite;}
+
+@keyframes fall {
+    to { transform: translateY(100vh); }
+}
+
+header {background: linear-gradient(to right,darkgreen, chartreuse);color:white;padding:24px 30px;border-bottom:1px solid black;}
+h1 {font-size:26px;margin-bottom:8px;display:flex;align-items:center;}
+h1 i {margin-right:12px;font-size:28px;}
+.subtitle {font-size:15px;opacity:0.85;margin-bottom:12px;}
+.training-controls {padding:20px 30px;background-color:black;border-bottom:1px solid #e1e8ed;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:15px;}
+.timer-container {display:flex;align-items:center;gap:10px;font-weight:600;font-size:18px;}
+.timer {background-color:green;color:white;padding:8px 16px;border-radius:20px;min-width:100px;text-align:center;}
+.attempts {background-color:red;color:white;padding:8px 16px;border-radius:20px;min-width:120px;text-align:center;}
+.progress-container {flex-grow:1;max-width:300px;}
+.progress-bar {height:20px;background-color:lightgreen;border-radius:10px;overflow:hidden;}
+.progress {height:100%;background: linear-gradient(90deg, #28a745, #20c997);width:0%;transition: width 0.5s ease;border-radius:10px;}
+.progress-text {text-align:center;font-size:14px;margin-top:5px;font-weight:600;}
+.task-instructions {background-color:black;padding:15px 30px;border-bottom:1px solid black;}
+.instructions {font-size:16px;color:green;}
+.instructions strong {color:red;}
+
+.code-blocks {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 15px;
+    margin: 30px 0;
+    padding: 0 20px;
+}
+
+.code-block {
+    background: rgba(15,20,15,0.95);
+    border: 2px solid rgba(0,255,150,0.3);
+    border-radius: 8px;
+    padding: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Courier New', monospace;
+    color: chartreuse;
+    min-height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.code-block:hover {
+    background: rgba(0,255,150,0.1);
+    border-color: rgba(0,255,150,0.6);
+    transform: translateY(-2px);
+}
+
+.code-block.selected {
+    background: rgba(0,255,150,0.2);
+    border-color: #00ff90;
+    box-shadow: 0 0 15px rgba(0,255,150,0.3);
+}
+.code-block.danger:hover {
+    border-color: chartreuse;
+    background: green;
+}
+
+.code-block.danger.selected {
+    background: chartreuse;
+    border-color: chartreuse;
+    box-shadow: 0 0 15px green;
+}
+
+.actions {padding:20px 30px;background:chartreuse;border-top:1px solid #e1e8ed;display:flex;justify-content:center;gap:15px;}
+button {padding:12px 24px;border:none;border-radius:6px;cursor:pointer;font-weight:600;transition:all 0.3s ease;font-size:16px;}
+#submitBtn {background-color:green;color:white;}
+#submitBtn:disabled {background-color:green;cursor:not-allowed;color:black;}
+#resetBtn {background-color:black;color:green;}
+.footer {padding:18px 30px;background: linear-gradient(to right,darkgreen, chartreuse);border-top:1px solid green;text-align:center;color:black;font-size:14px;}
+.results {padding:20px 30px;text-align:center;display:none;}
+.results h2 {margin-bottom:15px;color:#155724;}
+.score {font-size:24px;font-weight:bold;margin:20px 0;color:#0f5132;}
+
+.sabotage-warning {
+    color: red; 
+    font-weight: bold; 
+    text-align: center; 
+    padding: 10px; 
+    background-color: rgba(255, 0, 0, 0.1); 
+    margin: 10px 20px;
+    border-radius: 5px;
+    display: none;
+}
+</style>
+</head>
+<body>
+<!-- Binary Rain Background -->
+<div class="binary-rain" id="binaryRain"></div>
+
+<div class="container">
+<header>
+<h1><i>🛡️</i> Firewall Construction</h1>
+<div class="subtitle">Build your firewall by selecting only SAFE code blocks</div>
+</header>
+
+<div class="training-controls">
+<div class="timer-container">
+<span>Time Remaining:</span>
+<div class="timer" id="timer">03:00</div>
+</div>
+<div class="timer-container">
+<span>Attempts Left:</span>
+<div class="attempts" id="attempts">3</div>
+</div>
+<div class="progress-container">
+<div class="progress-bar">
+<div class="progress" id="progress"></div>
+</div>
+<div class="progress-text" id="progressText">Firewall Integrity: 0%</div>
+</div>
+</div>
+
+<div class="task-instructions">
+<div class="instructions">
+<strong>Training Task:</strong> Select only the <strong>SAFE code blocks</strong> to build your firewall. Avoid malware code! You have <strong>3 attempts</strong> and <strong>3 minutes</strong>.
+</div>
+<div class="sabotage-warning" id="sabotageWarning">⚠️ WARNING: Malware code blocks have been injected!</div>
+</div>
+
+<div class="code-blocks" id="codeBlocks">
+<!-- Code blocks will be generated here -->
+</div>
+
+<div class="actions">
+<button id="submitBtn" disabled>Submit Firewall</button>
+<button id="resetBtn">Reset Selection</button>
+</div>
+
+<div class="results" id="results">
+<h2 id="resultTitle">Firewall Status</h2>
+<div class="score" id="scoreDisplay">Integrity: 0%</div>
+<div id="resultDetails"></div>
+</div>
+
+<div class="footer">Firewall Construction - 3 Attempts Maximum</div>
+</div>
+
+<script>
+// Base code blocks
+const baseBlocks = [
+    { text: 'firewall.enableProtection(true);', safe: true },
+    { text: 'scan.start("C:\\\\System32");', safe: true },
+    { text: 'deleteAll(*.exe);', safe: false },
+    { text: 'openPort(8080);', safe: false },
+    { text: 'updateDefinitions();', safe: true },
+    { text: 'encryptUserData();', safe: false },
+    { text: 'blockIP("192.168.1.5");', safe: true },
+    { text: 'installMalware("trojan.dll");', safe: false },
+    { text: 'log.analyzeSuspicious();', safe: true },
+    { text: 'quarantine.file("suspicious.dll");', safe: true },
+    { text: 'disable.antivirus();', safe: false },
+    { text: 'format.drive("C:");', safe: false }
+];
+
+let selectedBlocks = [];
+let codeBlocks = [...baseBlocks];
+let timeLeft = 180;
+let attemptsLeft = 3;
+let gameCompleted = false;
+let progress = 0;
+
+const container = document.getElementById('codeBlocks');
+const timerDisplay = document.getElementById('timer');
+const attemptsDisplay = document.getElementById('attempts');
+const progressElement = document.getElementById('progress');
+const progressText = document.getElementById('progressText');
+const result = document.getElementById('results');
+const resultTitle = document.getElementById('resultTitle');
+const scoreDisplay = document.getElementById('scoreDisplay');
+const resultDetails = document.getElementById('resultDetails');
+const submitBtn = document.getElementById('submitBtn');
+const resetBtn = document.getElementById('resetBtn');
+const sabotageWarning = document.getElementById('sabotageWarning');
+
+// Create binary rain
+function createBinaryRain() {
+    const container = document.getElementById('binaryRain');
+    const binaryChars = '01';
+    const count = 25;
+    
+    for (let i = 0; i < count; i++) {
+        const digit = document.createElement('div');
+        digit.className = 'binary-digit';
+        digit.textContent = binaryChars[Math.floor(Math.random() * binaryChars.length)];
+        digit.style.left = Math.random() * 100 + 'vw';
+        digit.style.animationDuration = (3 + Math.random() * 5) + 's';
+        digit.style.animationDelay = Math.random() * 2 + 's';
+        digit.style.opacity = Math.random() * 0.4 + 0.1;
+        container.appendChild(digit);
+    }
+}
+
+function renderBlocks() {
+    container.innerHTML = '';
+    codeBlocks.forEach((block, i) => {
+        const div = document.createElement('div');
+        div.classList.add('code-block');
+        if (!block.safe) div.classList.add('danger');
+        if (selectedBlocks.includes(i)) div.classList.add('selected');
+        div.textContent = block.text;
+        div.onclick = () => toggleSelect(i, div);
+        container.appendChild(div);
+    });
+    updateProgress();
+}
+
+function toggleSelect(index, div) {
+    if (gameCompleted) return;
+    
+    if (selectedBlocks.includes(index)) {
+        selectedBlocks = selectedBlocks.filter(i => i !== index);
+        div.classList.remove('selected');
+    } else {
+        selectedBlocks.push(index);
+        div.classList.add('selected');
+    }
+    submitBtn.disabled = selectedBlocks.length === 0;
+    updateProgress();
+}
+
+function updateProgress() {
+    const safeBlocks = selectedBlocks.filter(index => codeBlocks[index].safe);
+    const unsafeBlocks = selectedBlocks.filter(index => !codeBlocks[index].safe);
+    
+    // Calculate integrity: positive for safe blocks, negative for unsafe
+    let integrity = 0;
+    if (selectedBlocks.length > 0) {
+        integrity = Math.max(0, (safeBlocks.length * 2 - unsafeBlocks.length * 3) / (codeBlocks.length * 2) * 100);
+    }
+    
+    progress = integrity;
+    progressElement.style.width = `${progress}%`;
+    progressText.textContent = `Firewall Integrity: ${Math.round(progress)}%`;
+    
+    submitBtn.disabled = selectedBlocks.length === 0;
+}
+
+// Timer
+let timerInterval;
+function startTimer() {
+    clearInterval(timerInterval);
+    timerDisplay.textContent = formatMMSS(timeLeft);
+    timerInterval = setInterval(() => {
+        timeLeft--;
+        timerDisplay.textContent = formatMMSS(timeLeft);
+        if (timeLeft <= 0) {
+            clearInterval(timerInterval);
+            handleTimeUp();
+        }
+    }, 1000);
+}
+
+function formatMMSS(sec) {
+    const m = Math.floor(sec/60).toString().padStart(2,'0');
+    const s = (sec%60).toString().padStart(2,'0');
+    return `${m}:${s}`;
+}
+
+function handleTimeUp() {
+    resultDetails.innerHTML = `<div style="color:#721c24;">Time's up! ${attemptsLeft-1} attempt(s) remaining.</div>`;
+    attemptsLeft--;
+    attemptsDisplay.textContent = attemptsLeft;
+    if (attemptsLeft <= 0) {
+        gameOver();
+    } else {
+        setTimeout(() => {
+            resetGame();
+        }, 3000);
+    }
+    showResults();
+}
+
+// Submit with 3 attempts limit
+function checkFirewall() {
+    if (gameCompleted) return;
+    
+    clearInterval(timerInterval);
+    gameCompleted = true;
+    
+    attemptsLeft--;
+    attemptsDisplay.textContent = attemptsLeft;
+    
+    const safeBlocks = selectedBlocks.filter(index => codeBlocks[index].safe);
+    const unsafeBlocks = selectedBlocks.filter(index => !codeBlocks[index].safe);
+    const allSafeBlocksSelected = codeBlocks.filter(b => b.safe).length === safeBlocks.length;
+    const noUnsafeBlocks = unsafeBlocks.length === 0;
+    
+    const perfect = allSafeBlocksSelected && noUnsafeBlocks;
+    
+    if (perfect) {
+        // SUCCESS
+        resultTitle.textContent = "✅ Firewall Built Successfully!";
+        scoreDisplay.textContent = `Integrity: 100%`;
+        resultDetails.innerHTML = '<div style="color:#155724;font-weight:bold;">Perfect! Your firewall is fully operational!</div>';
+        setTimeout(() => {
+            window.location.href = 'next-page.html';
+        }, 2000);
+    } else {
+        // FAILED
+        if (attemptsLeft > 0) {
+            resultTitle.textContent = "❌ Malware Detected!";
+            scoreDisplay.textContent = `Integrity: ${Math.round(progress)}%`;
+            resultDetails.innerHTML = `
+                <div>Safe blocks: <strong>${safeBlocks.length}</strong> / ${codeBlocks.filter(b => b.safe).length}</div>
+                <div>Malware blocks: <strong>${unsafeBlocks.length}</strong></div>
+                <div style="color:#721c24; margin-top:10px;">${attemptsLeft} attempt(s) remaining.</div>
+                <button onclick="retryAttempt()" style="margin-top:10px; padding:8px 16px; background:#ff4444; color:white; border:none; border-radius:5px; cursor:pointer;">Try Again</button>
+            `;
+        } else {
+            gameOver();
+        }
+    }
+    
+    showResults();
+}
+
+function retryAttempt() {
+    resetGame();
+}
+
+function resetGame() {
+    selectedBlocks = [];
+    gameCompleted = false;
+    progress = 0;
+    updateProgress();
+    result.style.display = 'none';
+    submitBtn.disabled = true;
+    timeLeft = 180;
+    timerDisplay.textContent = "03:00";
+    renderBlocks();
+    startTimer();
+}
+
+function gameOver() {
+    resultTitle.textContent = "🚫 Firewall Compromised";
+    scoreDisplay.textContent = `Final Integrity: ${Math.round(progress)}%`;
+    resultDetails.innerHTML = '<div style="color:#721c24;">No attempts remaining. System compromised.</div>';
+    submitBtn.disabled = true;
+    clearInterval(timerInterval);
+    showResults();
+}
+
+function showResults() {
+    result.style.display = 'block';
+}
+
+// Reset button
+resetBtn.addEventListener('click', () => {
+    if (!gameCompleted) {
+        selectedBlocks = [];
+        progress = 0;
+        updateProgress();
+        renderBlocks();
+    }
+});
+
+// Sabotage system - add malware blocks
+function injectMalware() {
+    const malwareBlocks = [
+        { text: 'execute.payload("ransomware.exe");', safe: false },
+        { text: 'disable.firewall();', safe: false },
+        { text: 'backdoor.create("admin");', safe: false }
+    ];
+    
+    // Add 1-2 random malware blocks
+    const count = Math.floor(Math.random() * 2) + 1;
+    for (let i = 0; i < count; i++) {
+        const malware = malwareBlocks[Math.floor(Math.random() * malwareBlocks.length)];
+        if (!codeBlocks.some(b => b.text === malware.text)) {
+            codeBlocks.push(malware);
+        }
+    }
+    
+    sabotageWarning.style.display = 'block';
+    setTimeout(() => sabotageWarning.style.display = 'none', 5000);
+    renderBlocks();
+}
+
+// Check for sabotage
+function checkForSabotage() {
+    if (localStorage.getItem('firewall_sabotage') === 'true') {
+        injectMalware();
+        localStorage.removeItem('firewall_sabotage');
+    }
+}
+
+// Initialize
+createBinaryRain();
+renderBlocks();
+startTimer();
+
+// Check for sabotage every second
+setInterval(checkForSabotage, 1000);
+
+// Event listeners
+submitBtn.addEventListener('click', checkFirewall);
+</script>
+</body>
+</html>
