@@ -340,7 +340,7 @@
             <ul>
                 <li><strong>ELIMINATE VIRUSES (🦠)</strong> - +1 point each</li>
                 <li><strong>PROTECT COMPUTERS (💻)</strong> - Avoid clicking these!</li>
-                <li><strong>TARGET: 20 POINTS</strong> in 1 minute to secure the system</li>
+                <li><strong>TARGET: 6 POINTS</strong> in 1 minute to secure the system</li>
                 <li><strong>3 ATTEMPTS TOTAL</strong> - Use them strategically</li>
                 <li>Game auto-starts - defense protocols active</li>
                 <li><strong>PERMANENT LOCK:</strong> After 3 attempts, system locks permanently</li>
@@ -375,7 +375,7 @@
     <script>
         // Game variables
         let score = 0;
-        let timeLeft = 30;
+        let timeLeft = 60;
         let attemptsLeft = 3;
         let gameActive = false;
         let currentAttemptActive = false;
@@ -410,27 +410,50 @@
             }
         }
         
-        // Load game state from localStorage
+        // Enhanced game state management
         function loadGameState() {
-            const savedAttempts = localStorage.getItem('cyberDefenseAttempts');
-            const savedLocked = localStorage.getItem('cyberDefenseLocked');
-            const savedPermanentLock = localStorage.getItem('cyberDefensePermanentLock');
+            // Check if this is a fresh page load (no sessionStorage flag)
+            const isFreshLoad = !sessionStorage.getItem('cyberDefenseSession');
             
-            if (savedAttempts !== null) {
-                attemptsLeft = parseInt(savedAttempts);
+            if (isFreshLoad) {
+                // This is a fresh page load, check for permanent lock
+                const savedPermanentLock = localStorage.getItem('cyberDefensePermanentLock');
+                
+                if (savedPermanentLock === 'true') {
+                    permanentLock = true;
+                    showLockedScreen();
+                    return true;
+                } else {
+                    // Reset attempts for fresh session
+                    attemptsLeft = 3;
+                    isLocked = false;
+                    saveGameState();
+                }
+                
+                // Mark this as an active session
+                sessionStorage.setItem('cyberDefenseSession', 'active');
+            } else {
+                // This is a refresh, load the current state
+                const savedAttempts = localStorage.getItem('cyberDefenseAttempts');
+                const savedLocked = localStorage.getItem('cyberDefenseLocked');
+                const savedPermanentLock = localStorage.getItem('cyberDefensePermanentLock');
+                
+                if (savedAttempts !== null) {
+                    attemptsLeft = parseInt(savedAttempts);
+                }
+                
+                if (savedLocked === 'true') {
+                    isLocked = true;
+                }
+                
+                if (savedPermanentLock === 'true') {
+                    permanentLock = true;
+                    showLockedScreen();
+                    return true;
+                }
             }
             
-            if (savedLocked === 'true') {
-                isLocked = true;
-            }
-            
-            if (savedPermanentLock === 'true') {
-                permanentLock = true;
-                showLockedScreen();
-                return true; // Return true if permanently locked
-            }
-            
-            return false; // Return false if not permanently locked
+            return false;
         }
         
         // Save game state to localStorage
@@ -475,7 +498,7 @@
             timeElement.textContent = timeLeft;
             attemptsElement.textContent = attemptsLeft;
             
-            messageElement.textContent = 'ELIMINATE VIRUSES (🦠) - AVOID COMPUTERS (💻) - TARGET: 20 POINTS';
+            messageElement.textContent = 'ELIMINATE VIRUSES (🦠) - AVOID COMPUTERS (💻) - TARGET: 6 POINTS';
             
             // Start timers
             timer = setInterval(updateTimer, 1000);
@@ -550,7 +573,7 @@
                     scoreElement.textContent = score;
                     
                     // Check for win condition (decreased from 9 to 6)
-                    if (score >= 20) {
+                    if (score >= 6) {
                         winGame();
                         return;
                     }
@@ -561,11 +584,11 @@
                     // Computer hit - penalty
                     score = Math.max(0, score - 2);
                     scoreElement.textContent = score;
-                    messageElement.textContent = `SYSTEM DAMAGE! -2 Points. Current: ${score}/20`;
+                    messageElement.textContent = `SYSTEM DAMAGE! -2 Points. Current: ${score}/6`;
                 }
                 
                 setTimeout(() => {
-                    if (gameActive) messageElement.textContent = `STATUS: ${score}/20 - ELIMINATE VIRUSES (🦠)`;
+                    if (gameActive) messageElement.textContent = `STATUS: ${score}/6 - ELIMINATE VIRUSES (🦠)`;
                 }, 1500);
             }
         }
