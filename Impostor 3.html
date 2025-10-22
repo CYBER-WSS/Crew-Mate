@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Network Packet Analysis</title>
+<style>
+* {box-sizing: border-box;margin:0;padding:0;}
+body {font-family: monospace;color: chartreuse;background-color: black;padding: 20px;line-height:1.6;overflow-x: hidden;position: relative;}
+.container {max-width: 1200px;margin:0 auto;background-color:black;border-radius:8px;overflow:hidden;position: relative;z-index: 2;}
+
+/* Binary Rain */
+.binary-rain {position: fixed;top: 0;left: 0;width: 100%;height: 100%;pointer-events: none;z-index: 1;opacity: 0.3;}
+.binary-digit {position: absolute;color: chartreuse;font-size: 14px;font-family: monospace;animation: fall linear infinite;}
+
+@keyframes fall {
+    to { transform: translateY(100vh); }
+}
+
+header {background: linear-gradient(to right,darkgreen, chartreuse);color:white;padding:24px 30px;border-bottom:1px solid black;}
+h1 {font-size:26px;margin-bottom:8px;display:flex;align-items:center;}
+h1 i {margin-right:12px;font-size:28px;}
+.subtitle {font-size:15px;opacity:0.85;margin-bottom:12px;}
+.training-controls {padding:20px 30px;background-color:black;border-bottom:1px solid #e1e8ed;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:15px;}
+.timer-container {display:flex;align-items:center;gap:10px;font-weight:600;font-size:18px;}
+.timer {background-color:green;color:white;padding:8px 16px;border-radius:20px;min-width:100px;text-align:center;}
+.attempts {background-color:red;color:white;padding:8px 16px;border-radius:20px;min-width:120px;text-align:center;}
+.progress-container {flex-grow:1;max-width:300px;}
+.progress-bar {height:20px;background-color:lightgreen;border-radius:10px;overflow:hidden;}
+.progress {height:100%;background: linear-gradient(90deg, #28a745, #20c997);width:0%;transition: width 0.5s ease;border-radius:10px;}
+.progress-text {text-align:center;font-size:14px;margin-top:5px;font-weight:600;}
+.task-instructions {background-color:black;padding:15px 30px;border-bottom:1px solid black;}
+.instructions {font-size:16px;color:green;}
+.instructions strong {color:red;}
+
+.packet-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin: 20px;
+    height: 400px;
+}
+
+.packet-column {
+    background: rgba(0,20,0,0.8);
+    border: 2px solid var(--matrix-green);
+    border-radius: 8px;
+    padding: 15px;
+}
+
+.packet-column h3 {
+    text-align: center;
+    margin-bottom: 15px;
+    color: chartreuse;
+}
+
+.packet-list {
+    height: 320px;
+    overflow-y: auto;
+    padding: 10px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 5px;
+}
+
+.packet-item {
+    background: rgba(0,255,65,0.05);
+    border: 1px solid rgba(0,255,65,0.3);
+    border-radius: 5px;
+    padding: 12px;
+    margin-bottom: 8px;
+    cursor: grab;
+    transition: all 0.3s ease;
+    font-size: 12px;
+    font-family: monospace;
+    position: relative;
+}
+
+.packet-item:hover {
+    background: rgba(0,255,65,0.1);
+}
+
+.packet-item.dragging {
+    opacity: 0.5;
+}
+
+.packet-info {
+    display: grid;
+    grid-template-columns: 80px 100px 80px 100px auto;
+    gap: 8px;
+    font-size: 11px;
+}
+
+.protocol-tcp { border-left: 3px solid #00ff88; }
+.protocol-udp { border-left: 3px solid #ffaa00; }
+.protocol-icmp { border-left: 3px solid #ff4444; }
+.protocol-http { border-left: 3px solid #4488ff; }
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+/* Hint box */
+.hint-box {
+    background: rgba(0,50,0,0.3);
+    border: 1px solid rgba(0,255,100,0.5);
+    border-radius: 8px;
+    padding: 12px;
+    margin: 10px 20px;
+    font-size: 14px;
+}
+
+.hint-box h4 {
+    color: #88ff88;
+    margin-bottom: 8px;
+}
+
+.hint-box ul {
+    margin-left: 20px;
+}
+
+.hint-box li {
+    margin-bottom: 5px;
+}
+
+.actions {padding:20px 30px;background:chartreuse;border-top:1px solid #e1e8ed;display:flex;justify-content:center;gap:15px;}
+button {padding:12px 24px;border:none;border-radius:6px;cursor:pointer;font-weight:600;transition:all 0.3s ease;font-size:16px;}
+#submitBtn {background-color:green;color:white;}
+#submitBtn:disabled {background-color:green;cursor:not-allowed;color:black;}
+#resetBtn {background-color:black;color:green;}
+.footer {padding:18px 30px;background: linear-gradient(to right,darkgreen, chartreuse);border-top:1px solid green;text-align:center;color:black;font-size:14px;}
+.results {padding:20px 30px;text-align:center;display:none;}
+.results h2 {margin-bottom:15px;color:#155724;}
+.score {font-size:24px;font-weight:bold;margin:20px 0;color:#0f5132;}
+
+/* Success animation */
+.success-pulse {
+    animation: success-pulse 0.5s ease-in-out;
+}
+
+@keyframes success-pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+</style>
+</head>
+<body>
+<!-- Binary Rain Background -->
+<div class="binary-rain" id="binaryRain"></div>
+
+<div class="container">
+<header>
+<h1><i>📡</i> Network Packet Analysis</h1>
+<div class="subtitle">Analyze network traffic and identify suspicious packets</div>
+</header>
+
+<div class="training-controls">
+<div class="timer-container">
+<span>Time Remaining:</span>
+<div class="timer" id="timer">03:00</div>
+</div>
+<div class="timer-container">
+<span>Attempts Left:</span>
+<div class="attempts" id="attempts">5</div>
+</div>
+<div class="progress-container">
+<div class="progress-bar">
+<div class="progress" id="progress"></div>
+</div>
+<div class="progress-text" id="progressText">Progress: 0%</div>
+</div>
+</div>
+
+<div class="task-instructions">
+<div class="instructions">
+<strong>Training Task:</strong> Drag suspicious network packets to the "Suspicious" column. Look for unusual ports, protocols, or data patterns. You have <strong>5 attempts</strong> and <strong>3 minutes</strong>.
+</div>
+</div>
+
+<div class="hint-box">
+<h4>💡 HINT: Look for these suspicious indicators:</h4>
+<ul>
+    <li>Unusual ports like 4444, 31337, 8080</li>
+    <li>Large packet sizes (> 2KB)</li>
+    <li>Unknown external IP addresses</li>
+    <li>Unusual protocols or flags</li>
+    <li>Packets with red blinking dots are suspicious!</li>
+</ul>
+</div>
+
+<div class="packet-container">
+<div class="packet-column" id="incomingColumn">
+<h3>📥 Incoming Packets</h3>
+<div class="packet-list" id="incomingList"></div>
+</div>
+<div class="packet-column" id="suspiciousColumn">
+<h3>🚫 Suspicious Packets</h3>
+<div class="packet-list" id="suspiciousList"></div>
+</div>
+</div>
+
+<div class="actions">
+<button id="submitBtn" disabled>Analyze Packets</button>
+<button id="resetBtn">Reset Selection</button>
+</div>
+
+<div class="results" id="results">
+<h2 id="resultTitle">Analysis Complete</h2>
+<div class="score" id="scoreDisplay">Accuracy: 0%</div>
+<div id="resultDetails"></div>
+</div>
+
+<div class="footer">Network Packet Analysis - 5 Attempts Maximum</div>
+</div>
+
+<script>
+const _0x4b2fe9=_0x5af5;(function(_0x4e41c5,_0x19b2c2){const _0x2f51d6=_0x5af5,_0x321b2b=_0x4e41c5();while(!![]){try{const _0x5f2194=-parseInt(_0x2f51d6(0x153))/0x1+parseInt(_0x2f51d6(0x15a))/0x2+parseInt(_0x2f51d6(0x114))/0x3+-parseInt(_0x2f51d6(0xf0))/0x4+parseInt(_0x2f51d6(0xef))/0x5+-parseInt(_0x2f51d6(0x11d))/0x6*(parseInt(_0x2f51d6(0xff))/0x7)+parseInt(_0x2f51d6(0x131))/0x8;if(_0x5f2194===_0x19b2c2)break;else _0x321b2b['push'](_0x321b2b['shift']());}catch(_0x52a1d4){_0x321b2b['push'](_0x321b2b['shift']());}}}(_0x3168,0x7eaad));function createBinaryRain(){const _0xef979=_0x5af5,_0x4858e4=document[_0xef979(0x159)](_0xef979(0x14c)),_0x2a4798='01',_0x267a54=0x19;for(let _0x418537=0x0;_0x418537<_0x267a54;_0x418537++){const _0x440e69=document['createElement'](_0xef979(0x136));_0x440e69[_0xef979(0x150)]=_0xef979(0x113),_0x440e69[_0xef979(0x12c)]=_0x2a4798[Math['floor'](Math[_0xef979(0x149)]()*_0x2a4798[_0xef979(0x103)])],_0x440e69[_0xef979(0x12a)][_0xef979(0x105)]=Math[_0xef979(0x149)]()*0x64+'vw',_0x440e69[_0xef979(0x12a)][_0xef979(0x14d)]=0x3+Math[_0xef979(0x149)]()*0x5+'s',_0x440e69[_0xef979(0x12a)][_0xef979(0x138)]=Math[_0xef979(0x149)]()*0x2+'s',_0x440e69[_0xef979(0x12a)][_0xef979(0x163)]=Math['random']()*0.4+0.1,_0x4858e4[_0xef979(0x10a)](_0x440e69);}}const packets=[{'id':0x1,'source':_0x4b2fe9(0x134),'dest':'8.8.8.8','protocol':_0x4b2fe9(0x127),'port':'53','size':_0x4b2fe9(0x13d),'flags':'QUERY','suspicious':![]},{'id':0x2,'source':'192.168.1.15','dest':'172.217.14.110','protocol':_0x4b2fe9(0x13a),'port':_0x4b2fe9(0x102),'size':_0x4b2fe9(0x107),'flags':_0x4b2fe9(0x143),'suspicious':![]},{'id':0x3,'source':_0x4b2fe9(0x125),'dest':'192.168.1.1','protocol':'ICMP','port':_0x4b2fe9(0xfc),'size':_0x4b2fe9(0x151),'flags':_0x4b2fe9(0x11b),'suspicious':![]},{'id':0x4,'source':_0x4b2fe9(0x14b),'dest':'93.184.216.34','protocol':_0x4b2fe9(0x112),'port':'80','size':_0x4b2fe9(0x110),'flags':_0x4b2fe9(0x12f),'suspicious':![]},{'id':0x5,'source':_0x4b2fe9(0x15f),'dest':_0x4b2fe9(0x12e),'protocol':_0x4b2fe9(0x11c),'port':'22','size':_0x4b2fe9(0x10f),'flags':_0x4b2fe9(0x157),'suspicious':![]},{'id':0x6,'source':_0x4b2fe9(0x15b),'dest':'192.168.1.10','protocol':'TCP','port':_0x4b2fe9(0x158),'size':'4.2KB','flags':_0x4b2fe9(0x117),'suspicious':!![]},{'id':0x7,'source':_0x4b2fe9(0x134),'dest':'198.51.100.44','protocol':_0x4b2fe9(0x108),'port':_0x4b2fe9(0x115),'size':'8.7KB','flags':_0x4b2fe9(0x15c),'suspicious':!![]},{'id':0x8,'source':_0x4b2fe9(0x13e),'dest':'192.168.1.15','protocol':_0x4b2fe9(0x121),'port':_0x4b2fe9(0x11f),'size':_0x4b2fe9(0x139),'flags':_0x4b2fe9(0x145),'suspicious':!![]},{'id':0x9,'source':_0x4b2fe9(0x15d),'dest':_0x4b2fe9(0x125),'protocol':_0x4b2fe9(0x104),'port':_0x4b2fe9(0xfc),'size':_0x4b2fe9(0xfe),'flags':'TIMESTAMP','suspicious':!![]},{'id':0xa,'source':'192.168.1.99','dest':'192.168.1.255','protocol':'UDP','port':_0x4b2fe9(0x10e),'size':'3.1KB','flags':_0x4b2fe9(0x11a),'suspicious':!![]}],incomingList=document['getElementById']('incomingList'),suspiciousList=document[_0x4b2fe9(0x159)](_0x4b2fe9(0x156)),timerElement=document[_0x4b2fe9(0x159)]('timer'),attemptsElement=document[_0x4b2fe9(0x159)]('attempts'),progressElement=document[_0x4b2fe9(0x159)](_0x4b2fe9(0x128)),progressText=document[_0x4b2fe9(0x159)](_0x4b2fe9(0x165)),submitBtn=document[_0x4b2fe9(0x159)](_0x4b2fe9(0x130)),resetBtn=document[_0x4b2fe9(0x159)](_0x4b2fe9(0x148)),resultsElement=document[_0x4b2fe9(0x159)]('results'),scoreDisplay=document['getElementById'](_0x4b2fe9(0x14a)),resultDetails=document[_0x4b2fe9(0x159)]('resultDetails'),resultTitle=document[_0x4b2fe9(0x159)]('resultTitle');let selectedPackets=[],timeLeft=0x3*0x3c,timerInterval,attemptsLeft=0x5,gameCompleted=![],progress=0x0,draggedPacket=null;function initializePackets(){const _0x4e0462=_0x4b2fe9;incomingList[_0x4e0462(0x152)]='',suspiciousList[_0x4e0462(0x152)]='',selectedPackets=[];const _0x2a8a5e=[...packets][_0x4e0462(0x147)](()=>Math[_0x4e0462(0x149)]()-0.5);_0x2a8a5e[_0x4e0462(0x123)](_0x37d401=>{const _0x3eec14=_0x4e0462,_0xdf30af=document['createElement'](_0x3eec14(0x136));_0xdf30af[_0x3eec14(0x150)]=_0x3eec14(0x119)+_0x37d401[_0x3eec14(0x135)][_0x3eec14(0xf9)]()+'\x20'+(_0x37d401[_0x3eec14(0x109)]?_0x3eec14(0x129):''),_0xdf30af[_0x3eec14(0x120)]=!![],_0xdf30af[_0x3eec14(0x141)]['id']=_0x37d401['id'],_0xdf30af['dataset']['suspicious']=_0x37d401['suspicious'];if(_0x37d401[_0x3eec14(0x109)]){const _0x3be0be=document[_0x3eec14(0x122)](_0x3eec14(0x136));_0x3be0be[_0x3eec14(0x150)]=_0x3eec14(0x13f),_0xdf30af['appendChild'](_0x3be0be);}_0xdf30af[_0x3eec14(0x152)]+=_0x3eec14(0x126)+_0x37d401[_0x3eec14(0x146)]+_0x3eec14(0x154)+_0x37d401[_0x3eec14(0xf6)]+'</span>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<span>'+_0x37d401[_0x3eec14(0x135)]+_0x3eec14(0xfb)+_0x37d401[_0x3eec14(0x12d)]+_0x3eec14(0x100)+_0x37d401[_0x3eec14(0x133)]+'</span>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20</div>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<div\x20style=\x22font-size:10px;\x20color:#88ff88;\x20margin-top:4px;\x22>Flags:\x20'+_0x37d401[_0x3eec14(0x14e)]+_0x3eec14(0x132),_0xdf30af['ondragstart']=dragPacket,incomingList[_0x3eec14(0x10a)](_0xdf30af);}),setupDropZones(),updateProgress();}function dragPacket(_0x3fb152){const _0xa15b89=_0x4b2fe9;draggedPacket=_0x3fb152[_0xa15b89(0x15e)],_0x3fb152[_0xa15b89(0x15e)]['classList']['add'](_0xa15b89(0x140));}function _0x3168(){const _0x220aaa=['192.168.1.20','\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<div\x20class=\x22packet-info\x22>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<span>','DNS','progress','suspicious-packet','style','filter','textContent','port','192.168.1.100','GET','submitBtn','1404288VrRkWL','</div>\x0a\x20\x20\x20\x20\x20\x20\x20\x20','size','192.168.1.10','protocol','div','\x20false\x20positives\x20detected.</p>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<p\x20style=\x22color:#721c24;\x22>','animationDelay','1.8KB','HTTPS','padStart','Accuracy:\x20','512B','203.0.113.21','suspicious-indicator','dragging','dataset','add','ACK','toString','DATA','source','sort','resetBtn','random','scoreDisplay','192.168.1.25','binaryRain','animationDuration','flags','false','className','84B','innerHTML','442215pXGSwD','</span>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<span>→\x20','from','suspiciousList','AUTH','4444','getElementById','1942268PmKsHb','45.83.212.99','PSH','10.0.0.250','target','192.168.1.30','addEventListener','true','\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<p\x20style=\x22color:#721c24;\x22>Found\x20','opacity','querySelectorAll','progressText','<p\x20style=\x22color:#721c24;\x22>Training\x20failed.\x20Please\x20review\x20network\x20security\x20protocols.</p>','03:00','incomingList','🚫\x20Maximum\x20Attempts\x20Reached','2525805SMbLFD','1378332CBFXks','.packet-item','classList','animation','<p\x20style=\x22color:#155724;font-weight:bold;\x22>Good\x20job!\x20You\x20identified\x20most\x20suspicious\x20packets\x20correctly!</p>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<p>Found\x20','success-pulse','dest','location','display','toLowerCase','round','</span>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<span>Port:\x20','N/A','pulse-warning\x201s\x20infinite','2.4KB','779142UoPHto','</span>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<span>','none','443','length','ICMP','left','#ff5555','1.2KB','TCP','suspicious','appendChild','width','disabled','remove','1900','768B','2.1KB','next-task.html','HTTP','binary-digit','630978wbaxuy','8080','click','SYN','Progress:\x20','packet-item\x20protocol-','BROADCAST','ECHO','SSH','30xJMMMt','block','31337','draggable','UDP','createElement','forEach','preventDefault'];_0x3168=function(){return _0x220aaa;};return _0x3168();}function setupDropZones(){const _0x570923=_0x4b2fe9,_0x58c915=document['getElementById'](_0x570923(0x156)),_0x3cea11=document[_0x570923(0x159)](_0x570923(0xed));[_0x58c915,_0x3cea11][_0x570923(0x123)](_0x24001a=>{const _0x4c8272=_0x570923;_0x24001a['addEventListener']('dragover',_0x23588d=>{const _0x7fc55f=_0x5af5;_0x23588d[_0x7fc55f(0x124)]();}),_0x24001a[_0x4c8272(0x160)]('drop',_0x588c5c=>{const _0x3051a4=_0x4c8272;_0x588c5c['preventDefault'](),draggedPacket&&(_0x24001a[_0x3051a4(0x10a)](draggedPacket),draggedPacket[_0x3051a4(0xf2)]['remove'](_0x3051a4(0x140)),updateProgress(),_0x24001a['id']===_0x3051a4(0x156)&&draggedPacket[_0x3051a4(0x141)]['suspicious']===_0x3051a4(0x161)&&(draggedPacket[_0x3051a4(0xf2)][_0x3051a4(0x142)](_0x3051a4(0xf5)),setTimeout(()=>{const _0x2f4010=_0x3051a4;draggedPacket[_0x2f4010(0xf2)][_0x2f4010(0x10d)]('success-pulse');},0x1f4)));});});}function updateProgress(){const _0x56d547=_0x4b2fe9,_0x1787fb=Array[_0x56d547(0x155)](suspiciousList[_0x56d547(0x164)](_0x56d547(0xf1))),_0xb8f015=_0x1787fb[_0x56d547(0x12b)](_0x28adfb=>_0x28adfb[_0x56d547(0x141)]['suspicious']===_0x56d547(0x161))[_0x56d547(0x103)];progress=_0xb8f015/packets[_0x56d547(0x12b)](_0x24f564=>_0x24f564[_0x56d547(0x109)])['length']*0x64,progressElement[_0x56d547(0x12a)][_0x56d547(0x10b)]=progress+'%',progressText['textContent']=_0x56d547(0x118)+Math[_0x56d547(0xfa)](progress)+'%',submitBtn['disabled']=_0x1787fb['length']===0x0;}function startTimer(){timerInterval=setInterval(()=>{const _0x238106=_0x5af5;timeLeft--;const _0x4192ea=Math['floor'](timeLeft/0x3c),_0x348131=timeLeft%0x3c;timerElement[_0x238106(0x12c)]=_0x4192ea[_0x238106(0x144)]()[_0x238106(0x13b)](0x2,'0')+':'+_0x348131['toString']()[_0x238106(0x13b)](0x2,'0'),timeLeft<=0x1e&&(timerElement[_0x238106(0x12a)]['color']=_0x238106(0x106),timerElement['style'][_0x238106(0xf3)]=_0x238106(0xfd)),timeLeft<=0x0&&(clearInterval(timerInterval),submitAnalysis());},0x3e8);}function submitAnalysis(){const _0x2bc025=_0x4b2fe9;if(gameCompleted)return;clearInterval(timerInterval),gameCompleted=!![],attemptsLeft--,attemptsElement[_0x2bc025(0x12c)]=attemptsLeft;const _0x26fef9=Array['from'](suspiciousList['querySelectorAll']('.packet-item')),_0x18c581=_0x26fef9[_0x2bc025(0x12b)](_0x461fa6=>_0x461fa6[_0x2bc025(0x141)][_0x2bc025(0x109)]==='true')['length'],_0x371d64=_0x26fef9[_0x2bc025(0x12b)](_0x35b452=>_0x35b452[_0x2bc025(0x141)][_0x2bc025(0x109)]===_0x2bc025(0x14f))[_0x2bc025(0x103)],_0x3076c3=packets[_0x2bc025(0x12b)](_0x49e1ce=>_0x49e1ce[_0x2bc025(0x109)])[_0x2bc025(0x103)],_0x4d6aaa=Math[_0x2bc025(0xfa)](_0x18c581/_0x3076c3*0x64);scoreDisplay['textContent']=_0x2bc025(0x13c)+_0x4d6aaa+'%',_0x4d6aaa>=0x50?(resultTitle['textContent']='✅\x20Analysis\x20Complete!',resultDetails['innerHTML']=_0x2bc025(0xf4)+_0x18c581+'/'+_0x3076c3+'\x20suspicious\x20packets.</p>',setTimeout(()=>{const _0x388969=_0x2bc025;window[_0x388969(0xf7)]['href']=_0x388969(0x111);},0x7d0)):attemptsLeft>0x0?(resultTitle['textContent']='❌\x20Analysis\x20Incomplete',resultDetails[_0x2bc025(0x152)]=_0x2bc025(0x162)+_0x18c581+'/'+_0x3076c3+'\x20suspicious\x20packets.</p>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<p>'+_0x371d64+_0x2bc025(0x137)+attemptsLeft+'\x20attempt(s)\x20remaining.</p>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<p><strong>Hint:</strong>\x20Look\x20for\x20packets\x20with\x20red\x20blinking\x20dots\x20and\x20unusual\x20ports!</p>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<button\x20onclick=\x22retryAttempt()\x22\x20style=\x22margin-top:10px;\x20padding:10px\x2020px;\x20background:green;\x20color:white;\x20border:none;\x20border-radius:5px;\x20cursor:pointer;\x22>Try\x20Again</button>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20'):(resultTitle[_0x2bc025(0x12c)]=_0x2bc025(0xee),resultDetails[_0x2bc025(0x152)]=_0x2bc025(0x166),submitBtn[_0x2bc025(0x10c)]=!![]),resultsElement[_0x2bc025(0x12a)][_0x2bc025(0xf8)]=_0x2bc025(0x11e);}function _0x5af5(_0x238652,_0x2d32ca){const _0x3168b6=_0x3168();return _0x5af5=function(_0x5af572,_0x17927e){_0x5af572=_0x5af572-0xed;let _0x26940e=_0x3168b6[_0x5af572];return _0x26940e;},_0x5af5(_0x238652,_0x2d32ca);}function retryAttempt(){const _0x6a6197=_0x4b2fe9;gameCompleted=![],progress=0x0,updateProgress(),resultsElement['style'][_0x6a6197(0xf8)]=_0x6a6197(0x101),initializePackets(),timeLeft=0x3*0x3c,timerElement[_0x6a6197(0x12c)]=_0x6a6197(0x167),startTimer();}function resetSelection(){!gameCompleted&&initializePackets();}createBinaryRain(),initializePackets(),startTimer(),submitBtn[_0x4b2fe9(0x160)](_0x4b2fe9(0x116),submitAnalysis),resetBtn['addEventListener']('click',resetSelection);
+</script>
+</body>
+</html>
