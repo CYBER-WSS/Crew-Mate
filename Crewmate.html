@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber Security Defense</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Courier New', monospace;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #000000, #001a00, #003300);
+            color: #00ff00;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1000px;
+            width: 100%;
+            background: rgba(0, 20, 0, 0.8);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 0 30px rgba(0, 255, 0, 0.3);
+            margin-top: 20px;
+            border: 1px solid #00ff00;
+            position: relative;
+            z-index: 10;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px #00ff00;
+            color: #00ff00;
+            letter-spacing: 2px;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            color: #00cc00;
+            text-shadow: 0 0 5px #00ff00;
+        }
+        
+        .instructions {
+            background: rgba(0, 40, 0, 0.6);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-left: 5px solid #00ff00;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.2);
+        }
+        
+        .instructions h2 {
+            color: #00ff00;
+            margin-bottom: 15px;
+            font-size: 1.8rem;
+            text-shadow: 0 0 5px #00ff00;
+        }
+        
+        .instructions ul {
+            list-style-type: none;
+            padding-left: 10px;
+        }
+        
+        .instructions li {
+            margin-bottom: 12px;
+            padding-left: 30px;
+            position: relative;
+            font-size: 1.1rem;
+            line-height: 1.5;
+        }
+        
+        .instructions li:before {
+            content: ">";
+            color: #00ff00;
+            font-size: 1.5rem;
+            position: absolute;
+            left: 0;
+            top: -3px;
+        }
+        
+        .game-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            background: rgba(0, 30, 0, 0.6);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid #00ff00;
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.2);
+        }
+        
+        .stat-box {
+            text-align: center;
+            padding: 10px;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #00ff00;
+            text-shadow: 0 0 5px #00ff00;
+        }
+        
+        .stat-label {
+            font-size: 1rem;
+            color: #00cc00;
+        }
+        
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .mole-hole {
+            width: 100%;
+            aspect-ratio: 1;
+            background: #002200;
+            border-radius: 50%;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
+            border: 3px solid #00ff00;
+            transition: all 0.2s;
+        }
+        
+        .mole-hole:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px #00ff00;
+        }
+        
+        .mole {
+            width: 70%;
+            height: 70%;
+            background: #004400;
+            border-radius: 50%;
+            position: absolute;
+            bottom: -100%;
+            left: 15%;
+            transition: bottom 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 2.5rem;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+            border: 2px solid #00aa00;
+            pointer-events: none;
+        }
+        
+        .mole.up {
+            bottom: 15%;
+        }
+        
+        .mole.whacked {
+            background: #006600;
+            transform: scale(0.9);
+            transition: all 0.2s;
+        }
+        
+        .virus {
+            background: #330000 !important;
+            border-color: #ff0000 !important;
+        }
+        
+        .computer {
+            background: #000033 !important;
+            border-color: #0066ff !important;
+        }
+        
+        .message {
+            margin-top: 20px;
+            font-size: 1.3rem;
+            text-align: center;
+            min-height: 40px;
+            color: #00ff00;
+            font-weight: bold;
+            text-shadow: 0 0 5px #00ff00;
+            padding: 10px;
+            border: 1px solid #00ff00;
+            border-radius: 5px;
+            background: rgba(0, 20, 0, 0.6);
+            width: 100%;
+            max-width: 600px;
+        }
+        
+        .locked-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            flex-direction: column;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .locked-message {
+            font-size: 2.5rem;
+            color: #ff0000;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px #ff0000;
+        }
+        
+        .locked-subtitle {
+            font-size: 1.5rem;
+            color: #00ff00;
+            margin-bottom: 30px;
+        }
+        
+        .binary-rain {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+            opacity: 0.3;
+        }
+        
+        .binary-digit {
+            position: absolute;
+            color: #00ff00;
+            font-size: 14px;
+            font-family: monospace;
+            animation: fall linear infinite;
+        }
+        
+        @keyframes fall {
+            to { transform: translateY(100vh); }
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #002200;
+            border-radius: 10px;
+            margin: 10px 0;
+            overflow: hidden;
+            border: 1px solid #00ff00;
+        }
+        
+        .progress {
+            height: 100%;
+            background: linear-gradient(90deg, #00aa00, #00ff00);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        @media (max-width: 768px) {
+            .game-board {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 10px;
+            }
+            
+            h1 {
+                font-size: 2.2rem;
+            }
+            
+            .instructions li {
+                font-size: 1rem;
+            }
+            
+            .locked-message {
+                font-size: 2rem;
+            }
+            
+            .locked-subtitle {
+                font-size: 1.2rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .game-board {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
+            }
+            
+            .stats {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Binary Rain Background -->
+    <div class="binary-rain" id="binaryRain"></div>
+
+    <!-- Locked Overlay (hidden by default) -->
+    <div class="locked-overlay" id="lockedOverlay" style="display: none;">
+        <div class="locked-message">🔒 SYSTEM PERMANENTLY LOCKED</div>
+        <div class="locked-subtitle">All attempts exhausted. Refresh will not restore access.</div>
+        <div class="locked-subtitle">Contact administrator for system reset.</div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>CYBER SECURITY DEFENSE</h1>
+            <div class="subtitle">Neutralize Viruses • Protect Computers • 1 Minute • 3 Attempts</div>
+        </header>
+        
+        <section class="instructions">
+            <h2>SECURITY PROTOCOL</h2>
+            <ul>
+                <li><strong>ELIMINATE VIRUSES (🦠)</strong> - +1 point each</li>
+                <li><strong>PROTECT COMPUTERS (💻)</strong> - Avoid clicking these!</li>
+                <li><strong>TARGET: 27 POINTS</strong> in 1 minute to secure the system</li>
+                <li><strong>3 ATTEMPTS TOTAL</strong> - Use them strategically</li>
+                <li>Game auto-starts - defense protocols active</li>
+                <li><strong>PERMANENT LOCK:</strong> After 3 attempts, system locks permanently</li>
+                <li><strong>COMPUTER = -2 POINTS</strong> and <strong>VIRUS = +1 POINT</strong></li>
+            </ul>
+        </section>
+        
+        <div class="game-area">
+            <div class="stats">
+                <div class="stat-box">
+                    <div class="stat-value" id="score">0</div>
+                    <div class="stat-label">SECURITY SCORE</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="time">60</div>
+                    <div class="stat-label">TIME REMAINING</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="attempts">3</div>
+                    <div class="stat-label">ATTEMPTS LEFT</div>
+                </div>
+            </div>
+            
+            <div class="progress-bar">
+                <div class="progress" id="progress"></div>
+            </div>
+            
+            <div class="game-board" id="gameBoard">
+                <!-- Security nodes will be generated by JavaScript -->
+            </div>
+            
+            <div class="message" id="message">INITIALIZING SECURITY PROTOCOLS...</div>
+        </div>
+    </div>
+
+    <script>
+     const _0x2185a0=_0x24cc;(function(_0x2235d4,_0xdd2e86){const _0x43c5bc=_0x24cc,_0x581fff=_0x2235d4();while(!![]){try{const _0x5c1be3=-parseInt(_0x43c5bc(0x1f2))/0x1*(parseInt(_0x43c5bc(0x1f4))/0x2)+parseInt(_0x43c5bc(0x1fc))/0x3*(-parseInt(_0x43c5bc(0x1e8))/0x4)+-parseInt(_0x43c5bc(0x1cb))/0x5+parseInt(_0x43c5bc(0x1cc))/0x6*(-parseInt(_0x43c5bc(0x1d7))/0x7)+parseInt(_0x43c5bc(0x204))/0x8*(parseInt(_0x43c5bc(0x1d6))/0x9)+parseInt(_0x43c5bc(0x1d9))/0xa*(-parseInt(_0x43c5bc(0x1e3))/0xb)+parseInt(_0x43c5bc(0x1b7))/0xc*(parseInt(_0x43c5bc(0x200))/0xd);if(_0x5c1be3===_0xdd2e86)break;else _0x581fff['push'](_0x581fff['shift']());}catch(_0xfdcd52){_0x581fff['push'](_0x581fff['shift']());}}}(_0x571e,0x6526d));let score=0x0,timeLeft=0x3c,attemptsLeft=0x3,gameActive=![],currentAttemptActive=![],timer,moleTimer,isLocked=![],permanentLock=![];const gameBoard=document[_0x2185a0(0x1bc)](_0x2185a0(0x1e9)),scoreElement=document[_0x2185a0(0x1bc)](_0x2185a0(0x1d5)),timeElement=document[_0x2185a0(0x1bc)](_0x2185a0(0x1ba)),attemptsElement=document[_0x2185a0(0x1bc)]('attempts'),messageElement=document[_0x2185a0(0x1bc)](_0x2185a0(0x1cd)),lockedOverlay=document[_0x2185a0(0x1bc)](_0x2185a0(0x1b6)),progressElement=document['getElementById']('progress');function _0x571e(){const _0x2a561f=['TIME\x27S\x20UP!\x20','none','max','div','#00ff00','Challenge\x201.5.html','innerHTML','/27','\x20ATTEMPT(S)\x20REMAINING','209hTQKns','🎉\x20SYSTEM\x20SECURED!\x20FINAL\x20SCORE:\x20','cyberDefenseLocked','includes','color','327476iFfUgk','gameBoard','cyberDefensePermanentLock','querySelectorAll','contains','#ff0000','appendChild','virus','setItem','computer','19UqIoJY','min','54394qHOxJC','padStart','click','random','VIRUS\x20NEUTRALIZED!\x20','display','binaryRain','opacity','9AEyQiu','push','width','length','15769ZDlvDj','textContent','style','floor','40432WNRaLk','createElement','.container','addEventListener','lockedOverlay','9684laDbyQ','index','left','time','classList','getElementById','location','remove','.mole','CRITICAL:\x20','whacked','center','animationDuration','.mole.up','cyberDefenseAttempts','flex','className','forEach','add','toString','340925olPMfd','398148XpoQqV','message','animationDelay','binary-digit','removeItem','s\x20-\x20SCORE:\x20','querySelector','ELIMINATE\x20VIRUSES\x20(🦠)\x20-\x20AVOID\x20COMPUTERS\x20(💻)\x20-\x20TARGET:\x2027\x20POINTS','cyberDefenseSession','score','1296acgHxb','14VMDwGl','mole','173210ZtBZDK'];_0x571e=function(){return _0x2a561f;};return _0x571e();}function createBinaryRain(){const _0x20f76f=_0x2185a0,_0x30b2fe=document[_0x20f76f(0x1bc)](_0x20f76f(0x1fa)),_0x1a0a6b='01',_0x255469=0x32;for(let _0x466e84=0x0;_0x466e84<_0x255469;_0x466e84++){const _0x31b645=document[_0x20f76f(0x1b3)](_0x20f76f(0x1dd));_0x31b645[_0x20f76f(0x1c7)]=_0x20f76f(0x1cf),_0x31b645['textContent']=_0x1a0a6b[Math['floor'](Math[_0x20f76f(0x1f7)]()*_0x1a0a6b[_0x20f76f(0x1ff)])],_0x31b645[_0x20f76f(0x202)][_0x20f76f(0x1b9)]=Math[_0x20f76f(0x1f7)]()*0x64+'vw',_0x31b645[_0x20f76f(0x202)][_0x20f76f(0x1c3)]=0x3+Math[_0x20f76f(0x1f7)]()*0x5+'s',_0x31b645['style'][_0x20f76f(0x1ce)]=Math[_0x20f76f(0x1f7)]()*0x2+'s',_0x31b645[_0x20f76f(0x202)][_0x20f76f(0x1fb)]=Math[_0x20f76f(0x1f7)]()*0.4+0.1,_0x30b2fe['appendChild'](_0x31b645);}}function loadGameState(){const _0x4d24be=_0x2185a0;return localStorage[_0x4d24be(0x1d0)]('cyberDefenseAttempts'),localStorage[_0x4d24be(0x1d0)](_0x4d24be(0x1e5)),localStorage[_0x4d24be(0x1d0)]('cyberDefensePermanentLock'),sessionStorage[_0x4d24be(0x1d0)](_0x4d24be(0x1d4)),attemptsLeft=0x3,isLocked=![],permanentLock=![],sessionStorage[_0x4d24be(0x1f0)](_0x4d24be(0x1d4),'active'),![];}function saveGameState(){const _0x3edba5=_0x2185a0;localStorage[_0x3edba5(0x1f0)](_0x3edba5(0x1c5),attemptsLeft[_0x3edba5(0x1ca)]()),localStorage[_0x3edba5(0x1f0)]('cyberDefenseLocked',isLocked['toString']()),localStorage[_0x3edba5(0x1f0)](_0x3edba5(0x1ea),permanentLock[_0x3edba5(0x1ca)]());}function initializeGameBoard(){const _0xc12685=_0x2185a0;gameBoard[_0xc12685(0x1e0)]='';for(let _0x5df79d=0x0;_0x5df79d<0x9;_0x5df79d++){const _0x267ecf=document['createElement'](_0xc12685(0x1dd));_0x267ecf['className']='mole-hole',_0x267ecf['dataset'][_0xc12685(0x1b8)]=_0x5df79d;const _0x5e0aa9=document[_0xc12685(0x1b3)]('div');_0x5e0aa9[_0xc12685(0x1c7)]=_0xc12685(0x1d8),_0x267ecf['appendChild'](_0x5e0aa9),_0x267ecf[_0xc12685(0x1b5)](_0xc12685(0x1f6),()=>whackMole(_0x5df79d)),gameBoard[_0xc12685(0x1ee)](_0x267ecf);}}function _0x24cc(_0x57b59d,_0x4a3cb1){const _0x571e63=_0x571e();return _0x24cc=function(_0x24cc39,_0x5d3987){_0x24cc39=_0x24cc39-0x1b3;let _0x85213c=_0x571e63[_0x24cc39];return _0x85213c;},_0x24cc(_0x57b59d,_0x4a3cb1);}function startGame(){const _0x1de41c=_0x2185a0;if(permanentLock){showLockedScreen();return;}if(currentAttemptActive)return;score=0x0,timeLeft=0x3c,currentAttemptActive=!![],gameActive=!![],scoreElement['textContent']=score,timeElement[_0x1de41c(0x201)]=timeLeft,attemptsElement['textContent']=attemptsLeft,updateProgress(),messageElement[_0x1de41c(0x201)]=_0x1de41c(0x1d3),timer=setInterval(updateTimer,0x3e8),startSecurityNodes();}function updateProgress(){const _0x2545ad=_0x2185a0,_0x4ad90f=score/0x1b*0x64;progressElement[_0x2545ad(0x202)][_0x2545ad(0x1fe)]=Math[_0x2545ad(0x1f3)](_0x4ad90f,0x64)+'%';}function startSecurityNodes(){moleTimer=setInterval(()=>{const _0x4e13df=_0x24cc;if(!gameActive)return;document[_0x4e13df(0x1eb)](_0x4e13df(0x1bf))[_0x4e13df(0x1c8)](_0x3560ac=>{const _0x466f7b=_0x4e13df;_0x3560ac[_0x466f7b(0x1bb)][_0x466f7b(0x1be)]('up'),_0x3560ac['classList'][_0x466f7b(0x1be)](_0x466f7b(0x1c1)),_0x3560ac[_0x466f7b(0x1bb)][_0x466f7b(0x1be)](_0x466f7b(0x1ef)),_0x3560ac[_0x466f7b(0x1bb)][_0x466f7b(0x1be)](_0x466f7b(0x1f1));});const _0x56e4b8=Math['floor'](Math['random']()*0x2)+0x2,_0x31b76a=[];for(let _0x7300c7=0x0;_0x7300c7<_0x56e4b8;_0x7300c7++){let _0x37528a;do{_0x37528a=Math['floor'](Math[_0x4e13df(0x1f7)]()*0x9);}while(_0x31b76a[_0x4e13df(0x1e6)](_0x37528a));_0x31b76a[_0x4e13df(0x1fd)](_0x37528a);const _0x1ff66b=document[_0x4e13df(0x1eb)](_0x4e13df(0x1bf))[_0x37528a],_0x5744d4=Math[_0x4e13df(0x1f7)]()<0.8;_0x5744d4?(_0x1ff66b[_0x4e13df(0x1e0)]='🦠',_0x1ff66b['classList'][_0x4e13df(0x1c9)]('virus')):(_0x1ff66b[_0x4e13df(0x1e0)]='💻',_0x1ff66b[_0x4e13df(0x1bb)]['add'](_0x4e13df(0x1f1))),_0x1ff66b[_0x4e13df(0x1bb)]['add']('up');}setTimeout(()=>{const _0x23f666=_0x4e13df;document[_0x23f666(0x1eb)](_0x23f666(0x1c4))[_0x23f666(0x1c8)](_0x51a262=>{const _0x175875=_0x23f666;!_0x51a262['classList'][_0x175875(0x1ec)]('whacked')&&_0x51a262[_0x175875(0x1bb)][_0x175875(0x1be)]('up');});},0xdac);},0x9c4);}function whackMole(_0x43291c){const _0x53cd3a=_0x2185a0;if(!gameActive)return;const _0x179086=document[_0x53cd3a(0x1eb)](_0x53cd3a(0x1bf))[_0x43291c];if(_0x179086[_0x53cd3a(0x1bb)][_0x53cd3a(0x1ec)]('up')&&!_0x179086['classList'][_0x53cd3a(0x1ec)]('whacked')){_0x179086[_0x53cd3a(0x1bb)][_0x53cd3a(0x1c9)](_0x53cd3a(0x1c1)),_0x179086[_0x53cd3a(0x1bb)][_0x53cd3a(0x1be)]('up');if(_0x179086['classList'][_0x53cd3a(0x1ec)](_0x53cd3a(0x1ef))){score++,scoreElement[_0x53cd3a(0x201)]=score,updateProgress();if(score>=0x1b){winGame();return;}messageElement['textContent']=_0x53cd3a(0x1f8)+score+'/27';}else _0x179086[_0x53cd3a(0x1bb)][_0x53cd3a(0x1ec)](_0x53cd3a(0x1f1))&&(score=Math[_0x53cd3a(0x1dc)](0x0,score-0x2),scoreElement['textContent']=score,updateProgress(),messageElement[_0x53cd3a(0x201)]='SYSTEM\x20DAMAGE!\x20-2\x20Points.\x20Current:\x20'+score+_0x53cd3a(0x1e1));setTimeout(()=>{const _0x28c422=_0x53cd3a;if(gameActive)messageElement[_0x28c422(0x201)]='STATUS:\x20'+score+'/27\x20-\x20ELIMINATE\x20VIRUSES\x20(🦠)';},0x5dc);}}function updateTimer(){const _0x3cb9eb=_0x2185a0;timeLeft--;const _0x1def16=Math[_0x3cb9eb(0x203)](timeLeft/0x3c),_0x1c2693=timeLeft%0x3c;timeElement[_0x3cb9eb(0x201)]=_0x1def16['toString']()[_0x3cb9eb(0x1f5)](0x2,'0')+':'+_0x1c2693[_0x3cb9eb(0x1ca)]()[_0x3cb9eb(0x1f5)](0x2,'0');if(timeLeft<=0x0)endAttempt(![]);else timeLeft<=0xf&&(timeElement['style'][_0x3cb9eb(0x1e7)]=_0x3cb9eb(0x1ed),messageElement[_0x3cb9eb(0x201)]=_0x3cb9eb(0x1c0)+timeLeft+_0x3cb9eb(0x1d1)+score+_0x3cb9eb(0x1e1));}function winGame(){const _0x578f44=_0x2185a0;gameActive=![],currentAttemptActive=![],clearInterval(timer),clearInterval(moleTimer),document['querySelectorAll'](_0x578f44(0x1bf))['forEach'](_0x406749=>{const _0x5e6fc6=_0x578f44;_0x406749[_0x5e6fc6(0x1bb)][_0x5e6fc6(0x1be)]('up');}),messageElement[_0x578f44(0x201)]=_0x578f44(0x1e4)+score,messageElement['style'][_0x578f44(0x1e7)]=_0x578f44(0x1de),messageElement['style']['textAlign']=_0x578f44(0x1c2),attemptsLeft=0x3,isLocked=![],permanentLock=![],saveGameState(),setTimeout(()=>{const _0x30ffaa=_0x578f44;window[_0x30ffaa(0x1bd)]['href']=_0x30ffaa(0x1df);},0x7d0);}function endAttempt(_0x1fd5b2){const _0x4e383e=_0x2185a0;gameActive=![],currentAttemptActive=![],clearInterval(timer),clearInterval(moleTimer),document[_0x4e383e(0x1eb)](_0x4e383e(0x1bf))[_0x4e383e(0x1c8)](_0x2f5904=>{const _0x42ccb5=_0x4e383e;_0x2f5904[_0x42ccb5(0x1bb)]['remove']('up');}),timeElement['style'][_0x4e383e(0x1e7)]=_0x4e383e(0x1de),!_0x1fd5b2&&(attemptsLeft--,attemptsLeft>0x0?(messageElement[_0x4e383e(0x201)]=_0x4e383e(0x1da)+score+'/27\x20-\x20'+attemptsLeft+_0x4e383e(0x1e2),setTimeout(startGame,0xbb8)):(isLocked=!![],permanentLock=!![],saveGameState(),showLockedScreen()),saveGameState());}function showLockedScreen(){const _0x1756dc=_0x2185a0;lockedOverlay[_0x1756dc(0x202)][_0x1756dc(0x1f9)]=_0x1756dc(0x1c6),document[_0x1756dc(0x1eb)]('.mole-hole')[_0x1756dc(0x1c8)](_0xe208cf=>{const _0x4c365e=_0x1756dc;_0xe208cf[_0x4c365e(0x202)]['pointerEvents']=_0x4c365e(0x1db);}),document[_0x1756dc(0x1d2)](_0x1756dc(0x1b4))[_0x1756dc(0x202)][_0x1756dc(0x1f9)]=_0x1756dc(0x1db);}createBinaryRain();const isPermanentlyLocked=loadGameState();!isPermanentlyLocked&&(initializeGameBoard(),setTimeout(()=>{startGame();},0x3e8));
+    </script>
+</body>
+</html>

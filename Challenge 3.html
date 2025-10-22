@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Firewall Construction</title>
+<style>
+* {box-sizing: border-box;margin:0;padding:0;}
+body {font-family: monospace;color: chartreuse;background-color: black;padding: 20px;line-height:1.6;overflow-x: hidden;position: relative;}
+.container {max-width: 1200px;margin:0 auto;background-color:black;border-radius:8px;overflow:hidden;position: relative;z-index: 2;}
+
+/* Binary Rain */
+.binary-rain {position: fixed;top: 0;left: 0;width: 100%;height: 100%;pointer-events: none;z-index: 1;opacity: 0.3;}
+.binary-digit {position: absolute;color: chartreuse;font-size: 14px;font-family: monospace;animation: fall linear infinite;}
+
+@keyframes fall {
+    to { transform: translateY(100vh); }
+}
+
+/* Disabled Overlay */
+.disabled-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.85);
+    z-index: 100;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: red;
+    font-size: 24px;
+    font-weight: bold;
+    text-align: center;
+    display: none;
+    border-radius: 8px;
+    flex-direction: column;
+}
+
+header {background: linear-gradient(to right,darkgreen, chartreuse);color:white;padding:24px 30px;border-bottom:1px solid black;}
+h1 {font-size:26px;margin-bottom:8px;display:flex;align-items:center;}
+h1 i {margin-right:12px;font-size:28px;}
+.subtitle {font-size:15px;opacity:0.85;margin-bottom:12px;}
+.training-controls {padding:20px 30px;background-color:black;border-bottom:1px solid #e1e8ed;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:15px;}
+.timer-container {display:flex;align-items:center;gap:10px;font-weight:600;font-size:18px;}
+.timer {background-color:green;color:white;padding:8px 16px;border-radius:20px;min-width:100px;text-align:center;}
+.attempts {background-color:red;color:white;padding:8px 16px;border-radius:20px;min-width:120px;text-align:center;}
+.progress-container {flex-grow:1;max-width:300px;}
+.progress-bar {height:20px;background-color:lightgreen;border-radius:10px;overflow:hidden;}
+.progress {height:100%;background: linear-gradient(90deg, #28a745, #20c997);width:0%;transition: width 0.5s ease;border-radius:10px;}
+.progress-text {text-align:center;font-size:14px;margin-top:5px;font-weight:600;}
+.task-instructions {background-color:black;padding:15px 30px;border-bottom:1px solid black;}
+.instructions {font-size:16px;color:green;}
+.instructions strong {color:red;}
+
+.code-blocks {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 15px;
+    margin: 30px 0;
+    padding: 0 20px;
+}
+
+.code-block {
+    background: rgba(15,20,15,0.95);
+    border: 2px solid rgba(0,255,150,0.3);
+    border-radius: 8px;
+    padding: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Courier New', monospace;
+    color: chartreuse;
+    min-height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-size: 14px;
+}
+
+.code-block:hover {
+    background: rgba(0,255,150,0.1);
+    border-color: rgba(0,255,150,0.6);
+    transform: translateY(-2px);
+}
+
+.code-block.selected {
+    background: rgba(0,255,150,0.2);
+    border-color: #00ff90;
+    box-shadow: 0 0 15px rgba(0,255,150,0.3);
+}
+
+
+.actions {padding:20px 30px;background:chartreuse;border-top:1px solid #e1e8ed;display:flex;justify-content:center;gap:15px;}
+button {padding:12px 24px;border:none;border-radius:6px;cursor:pointer;font-weight:600;transition:all 0.3s ease;font-size:16px;}
+button:disabled {opacity: 0.5; cursor: not-allowed;}
+#submitBtn {background-color:green;color:white;}
+#submitBtn:disabled {background-color:green;cursor:not-allowed;color:black;}
+#resetBtn {background-color:black;color:green;}
+.footer {padding:18px 30px;background: linear-gradient(to right,darkgreen, chartreuse);border-top:1px solid green;text-align:center;color:black;font-size:14px;}
+.results {padding:20px 30px;text-align:center;display:none;}
+.results h2 {margin-bottom:15px;color:#155724;}
+.score {font-size:24px;font-weight:bold;margin:20px 0;color:#0f5132;}
+
+.sabotage-warning {
+    color: red; 
+    font-weight: bold; 
+    text-align: center; 
+    padding: 10px; 
+    background-color: rgba(255, 0, 0, 0.1); 
+    margin: 10px 20px;
+    border-radius: 5px;
+    display: none;
+}
+</style>
+</head>
+<body>
+<!-- Binary Rain Background -->
+<div class="binary-rain" id="binaryRain"></div>
+
+<div class="container">
+    <!-- Disabled overlay -->
+    <div class="disabled-overlay" id="disabledOverlay">
+        <div>
+            <div style="font-size: 32px; margin-bottom: 20px;">🚫 ACCESS DENIED</div>
+            <div style="font-size: 18px;">Maximum attempts reached</div>
+            <div style="font-size: 14px; margin-top: 10px; color: #ff8888;">All interactions disabled</div>
+            <button onclick="resetAllProgress()" style="margin-top:20px; padding:10px 20px; background:#ff4444; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">Reset All Progress</button>
+        </div>
+    </div>
+
+<header>
+<h1><i>🛡️</i> Firewall Construction</h1>
+<div class="subtitle">Build your firewall by selecting only SAFE code blocks</div>
+</header>
+
+<div class="training-controls">
+<div class="timer-container">
+<span>Time Remaining:</span>
+<div class="timer" id="timer">03:00</div>
+</div>
+<div class="timer-container">
+<span>Attempts Left:</span>
+<div class="attempts" id="attempts">3</div>
+</div>
+<div class="progress-container">
+<div class="progress-bar">
+<div class="progress" id="progress"></div>
+</div>
+<div class="progress-text" id="progressText">Firewall Integrity: 0%</div>
+</div>
+</div>
+
+<div class="task-instructions">
+<div class="instructions">
+<strong>Training Task:</strong> Select only the <strong>SAFE code blocks</strong> to build your firewall. Avoid malware code! You have <strong>3 attempts</strong> and <strong>3 minutes</strong>.
+</div>
+<div class="sabotage-warning" id="sabotageWarning">⚠️ WARNING: Malware code blocks have been injected!</div>
+</div>
+
+<div class="code-blocks" id="codeBlocks">
+<!-- Code blocks will be generated here -->
+</div>
+
+<div class="actions">
+<button id="submitBtn" disabled>Submit Firewall</button>
+<button id="resetBtn">Reset Selection</button>
+</div>
+
+<div class="results" id="results">
+<h2 id="resultTitle">Firewall Status</h2>
+<div class="score" id="scoreDisplay">Integrity: 0%</div>
+<div id="resultDetails"></div>
+</div>
+
+<div class="footer">Firewall Construction - 3 Attempts Maximum</div>
+</div>
+
+<script>
+const _0x23499e=_0x3db6;(function(_0x356c67,_0x1ca947){const _0x59ede2=_0x3db6,_0x1ae2be=_0x356c67();while(!![]){try{const _0x2e2ec1=-parseInt(_0x59ede2(0x1e3))/0x1+-parseInt(_0x59ede2(0x1cb))/0x2+-parseInt(_0x59ede2(0x1c0))/0x3+parseInt(_0x59ede2(0x1a1))/0x4+parseInt(_0x59ede2(0x1a5))/0x5+-parseInt(_0x59ede2(0x1cc))/0x6+parseInt(_0x59ede2(0x1b5))/0x7*(parseInt(_0x59ede2(0x182))/0x8);if(_0x2e2ec1===_0x1ca947)break;else _0x1ae2be['push'](_0x1ae2be['shift']());}catch(_0x56e08f){_0x1ae2be['push'](_0x1ae2be['shift']());}}}(_0x499d,0x2bfbb));let attemptsLeft=0x3,gameCompleted=![];if(!sessionStorage['getItem'](_0x23499e(0x1ab)))localStorage['removeItem'](_0x23499e(0x18e)),localStorage['removeItem'](_0x23499e(0x189)),sessionStorage[_0x23499e(0x1de)](_0x23499e(0x1ab),_0x23499e(0x186));else{const storedAttempts=localStorage[_0x23499e(0x196)](_0x23499e(0x18e)),storedCompleted=localStorage[_0x23499e(0x196)](_0x23499e(0x189));storedAttempts!==null&&(attemptsLeft=parseInt(storedAttempts)),storedCompleted!==null&&(gameCompleted=storedCompleted==='true');}window[_0x23499e(0x1bc)]['search'][_0x23499e(0x1b8)](_0x23499e(0x1a6))&&(attemptsLeft=0x3,gameCompleted=![],localStorage['removeItem'](_0x23499e(0x18e)),localStorage[_0x23499e(0x1e0)](_0x23499e(0x189)),sessionStorage[_0x23499e(0x1e0)](_0x23499e(0x1ab)));console[_0x23499e(0x19b)](_0x23499e(0x1b4),attemptsLeft,'completed:',gameCompleted);const baseBlocks=[{'text':_0x23499e(0x1a4),'safe':!![]},{'text':_0x23499e(0x190),'safe':!![]},{'text':_0x23499e(0x1e2),'safe':![]},{'text':'system.run_disable();','safe':![]},{'text':_0x23499e(0x1c4),'safe':!![]},{'text':_0x23499e(0x1da),'safe':!![]},{'text':_0x23499e(0x1c7),'safe':!![]},{'text':_0x23499e(0x1ac),'safe':![]},{'text':_0x23499e(0x191),'safe':!![]},{'text':_0x23499e(0x1dd),'safe':!![]},{'text':_0x23499e(0x1ce),'safe':![]},{'text':_0x23499e(0x1a7),'safe':![]}];let selectedBlocks=[],codeBlocks=[...baseBlocks],timeLeft=0xb4,progress=0x0;const container=document[_0x23499e(0x1dc)](_0x23499e(0x1ad)),timerDisplay=document['getElementById']('timer'),attemptsDisplay=document['getElementById'](_0x23499e(0x1d4)),progressElement=document[_0x23499e(0x1dc)](_0x23499e(0x1b9)),progressText=document[_0x23499e(0x1dc)]('progressText'),result=document[_0x23499e(0x1dc)]('results'),resultTitle=document[_0x23499e(0x1dc)](_0x23499e(0x1e4)),scoreDisplay=document['getElementById'](_0x23499e(0x1bd)),resultDetails=document[_0x23499e(0x1dc)](_0x23499e(0x1db)),submitBtn=document[_0x23499e(0x1dc)]('submitBtn'),resetBtn=document[_0x23499e(0x1dc)](_0x23499e(0x198)),sabotageWarning=document[_0x23499e(0x1dc)]('sabotageWarning'),disabledOverlay=document[_0x23499e(0x1dc)](_0x23499e(0x1bb));function createBinaryRain(){const _0x2cd1cc=_0x23499e,_0x403760=document[_0x2cd1cc(0x1dc)](_0x2cd1cc(0x183)),_0xf5d3d1='01',_0x4d8d25=0x19;for(let _0x215978=0x0;_0x215978<_0x4d8d25;_0x215978++){const _0x356e3d=document[_0x2cd1cc(0x1c1)](_0x2cd1cc(0x18f));_0x356e3d['className']=_0x2cd1cc(0x1d9),_0x356e3d[_0x2cd1cc(0x185)]=_0xf5d3d1[Math[_0x2cd1cc(0x1af)](Math[_0x2cd1cc(0x1b0)]()*_0xf5d3d1[_0x2cd1cc(0x1c5)])],_0x356e3d['style'][_0x2cd1cc(0x184)]=Math['random']()*0x64+'vw',_0x356e3d[_0x2cd1cc(0x1ca)][_0x2cd1cc(0x17f)]=0x3+Math[_0x2cd1cc(0x1b0)]()*0x5+'s',_0x356e3d[_0x2cd1cc(0x1ca)][_0x2cd1cc(0x1d6)]=Math[_0x2cd1cc(0x1b0)]()*0x2+'s',_0x356e3d['style']['opacity']=Math['random']()*0.4+0.1,_0x403760[_0x2cd1cc(0x1b3)](_0x356e3d);}}function renderBlocks(){const _0x480225=_0x23499e;container['innerHTML']='',codeBlocks[_0x480225(0x192)]((_0x5599d5,_0x5e3b00)=>{const _0x3bdc15=_0x480225,_0x4a05f9=document[_0x3bdc15(0x1c1)](_0x3bdc15(0x18f));_0x4a05f9[_0x3bdc15(0x194)][_0x3bdc15(0x1a3)](_0x3bdc15(0x1c9));if(!_0x5599d5[_0x3bdc15(0x1bf)])_0x4a05f9[_0x3bdc15(0x194)][_0x3bdc15(0x1a3)](_0x3bdc15(0x199));if(selectedBlocks[_0x3bdc15(0x1b8)](_0x5e3b00))_0x4a05f9['classList']['add'](_0x3bdc15(0x1d7));_0x4a05f9[_0x3bdc15(0x185)]=_0x5599d5[_0x3bdc15(0x1c8)],_0x4a05f9[_0x3bdc15(0x1aa)]=()=>toggleSelect(_0x5e3b00,_0x4a05f9),container[_0x3bdc15(0x1b3)](_0x4a05f9);}),updateProgress();}function _0x499d(){const _0x55b6e2=['block','log','disabled','round','<div\x20style=\x22color:#155724;font-weight:bold;\x22>Perfect!\x20Your\x20firewall\x20is\x20fully\x20operational!</div>','Create\x20Backdoor','<div\x20style=\x22color:#721c24;\x22>No\x20attempts\x20remaining.\x20System\x20compromised.</div>','1343164JFJfLk','remove','add','system.run_fireset();','213060dowClh','reset=true','system.true_acess();','\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<div>Safe\x20blocks:\x20<strong>','reload','onclick','firewallSessionStarted','system.install_foreign();','codeBlocks','padStart','floor','random','toString','display','appendChild','Starting\x20with\x20attempts:','872683gFmpba','none','Firewall\x20Integrity:\x20','includes','progress','click','disabledOverlay','location','scoreDisplay','innerHTML','safe','367620swoPQc','createElement','querySelectorAll','\x20attempt(s)\x20remaining.</div>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<button\x20onclick=\x22retryAttempt()\x22\x20style=\x22margin-top:10px;\x20padding:8px\x2016px;\x20background:#ff4444;\x20color:white;\x20border:none;\x20border-radius:5px;\x20cursor:pointer;\x22>Try\x20Again</button>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20','system.update_user();','length','</div>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<div>Malware\x20blocks:\x20<strong>','system.block_trash();','text','code-block','style','28702GLNpkH','549684fPKanI','<div\x20style=\x22color:#721c24;\x22>Time\x27s\x20up!\x20','system.disable();','firewall_sabotage','width','03:00','<div\x20style=\x22color:#155724;font-weight:bold;\x22>Challenge\x20already\x20completed!</div>','Final\x20Integrity:\x20','attempts','opacity','animationDelay','selected','next-challenge.html','binary-digit','system.clear();','resultDetails','getElementById','system.layer_protect();','setItem','addEventListener','removeItem','.code-block','system.run_factory.flush();','94412jsatom','resultTitle','✅\x20Firewall\x20Built\x20Successfully!','animationDuration','0.5','Integrity:\x20100%','8vLFBtE','binaryRain','left','textContent','true','Integrity:\x20','\x20attempt(s)\x20remaining.</div>','firewallCompleted','filter','🚫\x20Firewall\x20Compromised','❌\x20Malware\x20Detected!','</strong>\x20/\x20','firewallAttempts','div','system.run_unaware_scan();','system.search_log();','forEach','max','classList','href','getItem','<div\x20style=\x22color:#721c24;\x22>No\x20attempts\x20remaining.</div>','resetBtn','danger'];_0x499d=function(){return _0x55b6e2;};return _0x499d();}function toggleSelect(_0x11df8e,_0x326aff){const _0x5203e1=_0x23499e;if(gameCompleted||attemptsLeft===0x0)return;selectedBlocks['includes'](_0x11df8e)?(selectedBlocks=selectedBlocks['filter'](_0x3ff74c=>_0x3ff74c!==_0x11df8e),_0x326aff['classList'][_0x5203e1(0x1a2)](_0x5203e1(0x1d7))):(selectedBlocks['push'](_0x11df8e),_0x326aff[_0x5203e1(0x194)][_0x5203e1(0x1a3)](_0x5203e1(0x1d7))),submitBtn[_0x5203e1(0x19c)]=selectedBlocks[_0x5203e1(0x1c5)]===0x0,updateProgress();}function updateProgress(){const _0x5e527c=_0x23499e,_0x5188fb=selectedBlocks['filter'](_0xea9f6c=>codeBlocks[_0xea9f6c]['safe']),_0x4c9737=selectedBlocks[_0x5e527c(0x18a)](_0x505477=>!codeBlocks[_0x505477][_0x5e527c(0x1bf)]);let _0x2d8502=0x0;selectedBlocks[_0x5e527c(0x1c5)]>0x0&&(_0x2d8502=Math[_0x5e527c(0x193)](0x0,(_0x5188fb['length']*0x2-_0x4c9737[_0x5e527c(0x1c5)]*0x3)/(codeBlocks['length']*0x2)*0x64)),progress=_0x2d8502,progressElement[_0x5e527c(0x1ca)][_0x5e527c(0x1d0)]=progress+'%',progressText[_0x5e527c(0x185)]=_0x5e527c(0x1b7)+Math['round'](progress)+'%',submitBtn[_0x5e527c(0x19c)]=selectedBlocks[_0x5e527c(0x1c5)]===0x0||attemptsLeft<=0x0;}let timerInterval;function startTimer(){const _0x1b32c7=_0x23499e;clearInterval(timerInterval),timerDisplay[_0x1b32c7(0x185)]=formatMMSS(timeLeft),timerInterval=setInterval(()=>{const _0x5b935c=_0x1b32c7;timeLeft--,timerDisplay[_0x5b935c(0x185)]=formatMMSS(timeLeft),timeLeft<=0x0&&(clearInterval(timerInterval),handleTimeUp());},0x3e8);}function formatMMSS(_0x1ab54b){const _0x45b3a2=_0x23499e,_0x2322de=Math[_0x45b3a2(0x1af)](_0x1ab54b/0x3c)[_0x45b3a2(0x1b1)]()[_0x45b3a2(0x1ae)](0x2,'0'),_0x52a988=(_0x1ab54b%0x3c)[_0x45b3a2(0x1b1)]()['padStart'](0x2,'0');return _0x2322de+':'+_0x52a988;}function handleTimeUp(){const _0x1f5162=_0x23499e;resultDetails[_0x1f5162(0x1be)]=_0x1f5162(0x1cd)+(attemptsLeft-0x1)+_0x1f5162(0x188),attemptsLeft--,localStorage[_0x1f5162(0x1de)]('firewallAttempts',attemptsLeft),attemptsLeft<=0x0?gameOver():setTimeout(()=>{resetGame();},0xbb8),showResults(),updateUI();}function disableAllInteractions(){const _0x38932d=_0x23499e;submitBtn[_0x38932d(0x19c)]=!![],resetBtn[_0x38932d(0x19c)]=!![],document[_0x38932d(0x1c2)](_0x38932d(0x1e1))[_0x38932d(0x192)](_0x2e0c4a=>{const _0x1ccba7=_0x38932d;_0x2e0c4a[_0x1ccba7(0x1ca)]['pointerEvents']=_0x1ccba7(0x1b6),_0x2e0c4a[_0x1ccba7(0x1ca)][_0x1ccba7(0x1d5)]=_0x1ccba7(0x180);}),disabledOverlay[_0x38932d(0x1ca)][_0x38932d(0x1b2)]='flex',clearInterval(timerInterval);}function resetAllProgress(){const _0x4c469f=_0x23499e;localStorage[_0x4c469f(0x1e0)](_0x4c469f(0x18e)),localStorage[_0x4c469f(0x1e0)](_0x4c469f(0x189)),sessionStorage[_0x4c469f(0x1e0)](_0x4c469f(0x1ab)),location[_0x4c469f(0x1a9)]();}function checkFirewall(){const _0x4a9b40=_0x23499e;if(gameCompleted||attemptsLeft<=0x0)return;clearInterval(timerInterval),gameCompleted=!![],attemptsLeft--,localStorage[_0x4a9b40(0x1de)]('firewallAttempts',attemptsLeft);const _0x14834a=selectedBlocks[_0x4a9b40(0x18a)](_0x265d22=>codeBlocks[_0x265d22][_0x4a9b40(0x1bf)]),_0x1081dd=selectedBlocks[_0x4a9b40(0x18a)](_0x1a73d6=>!codeBlocks[_0x1a73d6][_0x4a9b40(0x1bf)]),_0x18dfc1=codeBlocks[_0x4a9b40(0x18a)](_0x453345=>_0x453345[_0x4a9b40(0x1bf)])['length']===_0x14834a['length'],_0x4df989=_0x1081dd['length']===0x0,_0x30db56=_0x18dfc1&&_0x4df989;_0x30db56?(resultTitle['textContent']=_0x4a9b40(0x1e5),scoreDisplay[_0x4a9b40(0x185)]=_0x4a9b40(0x181),resultDetails[_0x4a9b40(0x1be)]=_0x4a9b40(0x19e),localStorage[_0x4a9b40(0x1de)](_0x4a9b40(0x189),'true'),setTimeout(()=>{const _0x5c1127=_0x4a9b40;localStorage[_0x5c1127(0x1e0)](_0x5c1127(0x18e)),localStorage[_0x5c1127(0x1e0)](_0x5c1127(0x189)),sessionStorage[_0x5c1127(0x1e0)](_0x5c1127(0x1ab)),window[_0x5c1127(0x1bc)][_0x5c1127(0x195)]=_0x5c1127(0x1d8);},0x7d0)):attemptsLeft>0x0?(resultTitle['textContent']=_0x4a9b40(0x18c),scoreDisplay['textContent']=_0x4a9b40(0x187)+Math[_0x4a9b40(0x19d)](progress)+'%',resultDetails[_0x4a9b40(0x1be)]=_0x4a9b40(0x1a8)+_0x14834a['length']+_0x4a9b40(0x18d)+codeBlocks[_0x4a9b40(0x18a)](_0x3f43f8=>_0x3f43f8[_0x4a9b40(0x1bf)])['length']+_0x4a9b40(0x1c6)+_0x1081dd[_0x4a9b40(0x1c5)]+'</strong></div>\x0a\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20<div\x20style=\x22color:#721c24;\x20margin-top:10px;\x22>'+attemptsLeft+_0x4a9b40(0x1c3)):gameOver(),showResults(),updateUI();}function retryAttempt(){resetGame();}function resetGame(){const _0xb23b3b=_0x23499e;attemptsLeft>0x0&&!gameCompleted&&(selectedBlocks=[],gameCompleted=![],progress=0x0,updateProgress(),result[_0xb23b3b(0x1ca)][_0xb23b3b(0x1b2)]=_0xb23b3b(0x1b6),submitBtn[_0xb23b3b(0x19c)]=!![],timeLeft=0xb4,timerDisplay[_0xb23b3b(0x185)]=_0xb23b3b(0x1d1),renderBlocks(),startTimer(),updateUI());}function _0x3db6(_0x21093c,_0x31fcc3){const _0x499d17=_0x499d();return _0x3db6=function(_0x3db65d,_0x5bba00){_0x3db65d=_0x3db65d-0x17f;let _0x419a12=_0x499d17[_0x3db65d];return _0x419a12;},_0x3db6(_0x21093c,_0x31fcc3);}function gameOver(){const _0x3dc86b=_0x23499e;resultTitle['textContent']=_0x3dc86b(0x18b),scoreDisplay[_0x3dc86b(0x185)]=_0x3dc86b(0x1d3)+Math[_0x3dc86b(0x19d)](progress)+'%',resultDetails[_0x3dc86b(0x1be)]=_0x3dc86b(0x1a0),disableAllInteractions(),showResults();}function showResults(){const _0x5c7203=_0x23499e;result['style'][_0x5c7203(0x1b2)]='block';}function updateUI(){const _0x1a6b39=_0x23499e;attemptsDisplay['textContent']=attemptsLeft,submitBtn[_0x1a6b39(0x19c)]=gameCompleted||attemptsLeft<=0x0||selectedBlocks['length']===0x0,resetBtn[_0x1a6b39(0x19c)]=gameCompleted||attemptsLeft<=0x0;}function checkInitialState(){const _0x4a951a=_0x23499e;if(gameCompleted)resultTitle[_0x4a951a(0x185)]='✅\x20Challenge\x20Already\x20Completed',scoreDisplay['textContent']=_0x4a951a(0x181),resultDetails[_0x4a951a(0x1be)]=_0x4a951a(0x1d2),showResults();else attemptsLeft<=0x0&&(disableAllInteractions(),resultTitle[_0x4a951a(0x185)]=_0x4a951a(0x18b),scoreDisplay['textContent']='Final\x20Integrity:\x200%',resultDetails[_0x4a951a(0x1be)]=_0x4a951a(0x197),showResults());}resetBtn[_0x23499e(0x1df)](_0x23499e(0x1ba),()=>{!gameCompleted&&attemptsLeft>0x0&&(selectedBlocks=[],progress=0x0,updateProgress(),renderBlocks());});function injectMalware(){const _0x35d3e8=_0x23499e,_0x19b941=[{'text':'Execute\x20Ransomware','safe':![]},{'text':'Disable\x20Firewall','safe':![]},{'text':_0x35d3e8(0x19f),'safe':![]}],_0xe09cb0=Math['floor'](Math[_0x35d3e8(0x1b0)]()*0x2)+0x1;for(let _0x3ada6c=0x0;_0x3ada6c<_0xe09cb0;_0x3ada6c++){const _0x23a30c=_0x19b941[Math[_0x35d3e8(0x1af)](Math['random']()*_0x19b941[_0x35d3e8(0x1c5)])];!codeBlocks['some'](_0xa0e67e=>_0xa0e67e[_0x35d3e8(0x1c8)]===_0x23a30c[_0x35d3e8(0x1c8)])&&codeBlocks['push'](_0x23a30c);}sabotageWarning[_0x35d3e8(0x1ca)][_0x35d3e8(0x1b2)]=_0x35d3e8(0x19a),setTimeout(()=>sabotageWarning[_0x35d3e8(0x1ca)][_0x35d3e8(0x1b2)]=_0x35d3e8(0x1b6),0x1388),renderBlocks();}function checkForSabotage(){const _0x552ce8=_0x23499e;localStorage[_0x552ce8(0x196)](_0x552ce8(0x1cf))===_0x552ce8(0x186)&&(injectMalware(),localStorage['removeItem'](_0x552ce8(0x1cf)));}createBinaryRain(),renderBlocks(),updateUI(),checkInitialState();attemptsLeft>0x0&&!gameCompleted&&startTimer();setInterval(checkForSabotage,0x3e8),submitBtn[_0x23499e(0x1df)]('click',checkFirewall);
+</script>
+</body>
+</html>

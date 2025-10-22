@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Phishing Mail - Drag & Sort</title>
+<style>
+  :root{
+    --bg:#000;
+    --neon:#00ff66;
+    --muted:#8fbfcf;
+    --danger:#ff5c6c;
+  }
+  html,body{height:100%;margin:0;font-family:monospace;background:
+    radial-gradient(1200px 600px at 10% 10%, black), linear-gradient(to top, #001100, black);
+    color:var(--neon); -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; overflow-x: hidden; position: relative;}
+  
+  /* Binary Rain */
+  .binary-rain {position: fixed;top: 0;left: 0;width: 100%;height: 100%;pointer-events: none;z-index: 1;opacity: 0.3;}
+  .binary-digit {position: absolute;color: chartreuse;font-size: 14px;font-family: monospace;animation: fall linear infinite;}
+
+  @keyframes fall {
+    to { transform: translateY(100vh); }
+  }
+
+  /* Disabled Overlay */
+  .disabled-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.95);
+    z-index: 2000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: var(--danger);
+    font-size: 24px;
+    font-weight: bold;
+    text-align: center;
+    display: none;
+    flex-direction: column;
+  }
+
+  #taskbar { background: rgba(10,10,10,0.95); color: var(--neon); padding: 10px 14px; display:flex; gap:12px; align-items:center; border-bottom:1px solid rgba(0,255,150,0.06); position: fixed; top:0; left:0; width:100%; box-sizing:border-box; z-index:1000; }
+  #taskbar > div { display:flex; gap:8px; align-items:center; font-size:14px; }
+  #taskbar button { background:#07120a; color:var(--neon); border:1px solid rgba(0,255,150,0.12); border-radius:6px; padding:6px 10px; cursor:pointer; font-weight:700; }
+  #taskbar button:disabled { opacity: 0.3; cursor: not-allowed; }
+  main { padding: 106px 20px 40px; max-width:1100px; margin:0 auto; position: relative; z-index: 2; }
+  h1{ text-align:center; color:var(--neon); margin:6px 0 8px; }
+  p{ text-align:center; color:var(--muted); margin:0 0 18px; }
+  .container{ display:flex; gap:20px; align-items:flex-start; justify-content:center; flex-wrap:wrap; }
+  .column{ background: rgba(5,10,5,0.8); padding:12px; border-radius:10px; flex:1 1 320px; min-height:380px; border:2px dashed rgba(0,255,150,0.06); box-sizing:border-box; }
+  .column h2{ text-align:center; margin:6px 0 10px; color:var(--neon); font-size:16px; }
+  #emails{ flex-basis:100%; margin-top:20px; display:flex; flex-wrap:wrap; gap:10px; justify-content:center; transition:all 300ms ease; }
+  .mail{ background: rgba(15,20,15,0.95); border-radius:8px; padding:10px; color:var(--neon); min-width:260px; max-width:360px; cursor:grab; box-shadow:0 6px 18px rgba(0,255,150,0.02); border-left:3px solid rgba(0,255,150,0.05); user-select:none; transition: transform 300ms ease, opacity 200ms ease; }
+  .mail.disabled { cursor: not-allowed; opacity: 0.4; }
+  .mail.dragging{ opacity:0.6; transform:scale(1.02); }
+  #resultDisplay{ margin-top:16px; text-align:center; color:var(--neon); font-weight:700; font-size:16px; min-height:36px; }
+  .msg-error{ color:#ff7070; font-weight:700; margin-top:8px; }
+  .msg-success{ color:#7cffb2; font-weight:700; margin-top:8px; }
+  
+  /* Progress Bar */
+  .progress-container { flex-grow: 1; max-width: 200px; }
+  .progress-bar { height: 12px; background-color: rgba(0,255,150,0.1); border-radius: 6px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, #00ff66, #20c997); width: 0%; transition: width 0.5s ease; border-radius: 6px; }
+  
+  /* Attempts Counter */
+  .attempts-counter { background-color: #ff4444; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: bold; }
+  
+  #sabotageBanner {
+    position: fixed;
+    top: 56px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1200;
+    background: linear-gradient(90deg, rgba(255,90,90,0.95), rgba(255,50,80,0.95));
+    color: white;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-weight: 800;
+    display: none;
+    box-shadow: 0 10px 30px rgba(255, 40, 60, 0.12);
+    animation: blink 1s linear infinite;
+  }
+  @keyframes blink { 0% {opacity:1} 50% {opacity:0.85} 100% {opacity:1} }
+
+  /* shuffle visual class */
+  .shuffling {
+    opacity: 0.6;
+    transform: scale(0.995);
+    transition: transform 300ms ease, opacity 300ms ease;
+  }
+
+  @media (max-width:820px){ .mail{ min-width:90%; max-width:calc(100% - 40px); } .container{ padding:0 10px; } }
+</style>
+</head>
+<body>
+  <!-- Binary Rain Background -->
+  <div class="binary-rain" id="binaryRain"></div>
+
+  <!-- Disabled Overlay -->
+  <div class="disabled-overlay" id="disabledOverlay">
+    <div style="font-size: 32px; margin-bottom: 20px;">🚫 ACCESS DENIED</div>
+    <div style="font-size: 18px;">Maximum attempts reached</div>
+    <div style="font-size: 14px; margin-top: 10px; color: #ff8888;">All interactions disabled</div>
+    <!-- REMOVED RESET BUTTON -->
+  </div>
+
+  <div id="taskbar" role="region" aria-label="Controls">
+    <div>Time: <span id="timer">03:00</span></div>
+    <div class="progress-container">
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <div style="text-align:center; font-size:11px; margin-top:2px;">Progress: <span id="progressText">0%</span></div>
+    </div>
+    <div class="attempts-counter">Attempts: <span id="attemptsLeft">3</span></div>
+    <div style="margin-left:auto;display:flex;gap:8px;">
+      <button id="submitBtn" type="button">Submit</button>
+    </div>
+  </div>
+
+  <div id="sabotageBanner" role="status" aria-live="assertive">⚠️ IMPOSTOR SABOTAGE DETECTED — MAIL ORDER SHUFFLED</div>
+
+  <main>
+    <h1>Drag and Drop: Sort Phishing Emails</h1>
+    <p>Drag each email into the correct column: <strong>Real Email</strong> or <strong>Phishing Email</strong></p>
+    <p style="color: #ff4444; font-size: 14px;">You have <strong>3 attempts</strong> to get all emails correct!</p>
+
+    <div class="container" aria-live="polite">
+      <div class="column" id="real" aria-label="Real emails drop zone"><h2>Real Email</h2></div>
+      <div class="column" id="phishing" aria-label="Phishing emails drop zone"><h2>Phishing Email</h2></div>
+      <div id="emails" aria-label="Unsorted emails area"></div>
+    </div>
+
+    <div id="controls" aria-hidden="true"></div>
+    <div id="resultDisplay" aria-live="polite"></div>
+  </main>
+
+<script>
+const _0x7ba8af=_0x477b;(function(_0x50c9db,_0x48fbe6){const _0x4725e9=_0x477b,_0x55169b=_0x50c9db();while(!![]){try{const _0x2c6ca4=parseInt(_0x4725e9(0x1cd))/0x1+-parseInt(_0x4725e9(0x21d))/0x2*(parseInt(_0x4725e9(0x221))/0x3)+-parseInt(_0x4725e9(0x1fe))/0x4+-parseInt(_0x4725e9(0x1af))/0x5*(-parseInt(_0x4725e9(0x1c7))/0x6)+parseInt(_0x4725e9(0x215))/0x7*(parseInt(_0x4725e9(0x1df))/0x8)+-parseInt(_0x4725e9(0x1e7))/0x9*(-parseInt(_0x4725e9(0x1c0))/0xa)+-parseInt(_0x4725e9(0x1e4))/0xb;if(_0x2c6ca4===_0x48fbe6)break;else _0x55169b['push'](_0x55169b['shift']());}catch(_0x3563be){_0x55169b['push'](_0x55169b['shift']());}}}(_0x4704,0xadcbf));const redirectUrl=_0x7ba8af(0x1bd);let attemptsLeft=0x3,gameCompleted=![];if(!sessionStorage[_0x7ba8af(0x1cb)](_0x7ba8af(0x1b0)))localStorage[_0x7ba8af(0x207)](_0x7ba8af(0x1eb)),localStorage[_0x7ba8af(0x207)](_0x7ba8af(0x1b8)),sessionStorage['setItem'](_0x7ba8af(0x1b0),_0x7ba8af(0x20d));else{const storedAttempts=localStorage[_0x7ba8af(0x1cb)](_0x7ba8af(0x1eb)),storedCompleted=localStorage[_0x7ba8af(0x1cb)](_0x7ba8af(0x1b8));storedAttempts!==null&&(attemptsLeft=parseInt(storedAttempts)),storedCompleted!==null&&(gameCompleted=storedCompleted===_0x7ba8af(0x20d));}window[_0x7ba8af(0x1b4)][_0x7ba8af(0x1e9)][_0x7ba8af(0x212)]('reset=true')&&(attemptsLeft=0x3,gameCompleted=![],localStorage['removeItem'](_0x7ba8af(0x1eb)),localStorage[_0x7ba8af(0x207)]('phishingCompleted'),sessionStorage[_0x7ba8af(0x207)](_0x7ba8af(0x1b0)));console[_0x7ba8af(0x20b)](_0x7ba8af(0x1f6),attemptsLeft,'completed:',gameCompleted);const emails=[{'id':0x1,'text':_0x7ba8af(0x1f0),'type':_0x7ba8af(0x1fa)},{'id':0x2,'text':_0x7ba8af(0x1cc),'type':_0x7ba8af(0x1fa)},{'id':0x3,'text':'Subject:\x20CONGRATULATIONS\x20—\x20You\x27ve\x20been\x20selected\x20for\x20$1,000\x20prize!','type':_0x7ba8af(0x1fa)},{'id':0x4,'text':'Subject:\x20URGENT:\x20New\x20bank\x20details\x20for\x20your\x20upcoming\x20payment\x20to\x20VendorCorp','type':_0x7ba8af(0x1fa)},{'id':0x5,'text':'Subject:\x20URGENT\x20—\x20Wire\x20transfer\x20request,\x20confidential','type':_0x7ba8af(0x1fa)},{'id':0x6,'text':_0x7ba8af(0x1e5),'type':_0x7ba8af(0x1fa)},{'id':0x7,'text':'Subject:\x20Mandatory\x20All-Staff\x20Meeting\x20—\x20Please\x20Accept','type':_0x7ba8af(0x1fa)},{'id':0x8,'text':_0x7ba8af(0x209),'type':_0x7ba8af(0x1fa)},{'id':0x9,'text':_0x7ba8af(0x1bb),'type':_0x7ba8af(0x1fa)},{'id':0xa,'text':_0x7ba8af(0x213),'type':_0x7ba8af(0x1fa)},{'id':0xb,'text':'Subject:\x20Reminder\x20—\x20Invoice\x20INV-3345\x20due\x2015\x20Oct\x202025','type':_0x7ba8af(0x222)},{'id':0xc,'text':_0x7ba8af(0x1d2),'type':'real'},{'id':0xd,'text':_0x7ba8af(0x1fb),'type':'real'},{'id':0xe,'text':'Subject:\x20Invitation\x20to\x20panel:\x20\x22Emerging\x20Technologies\x20in\x20Education\x22\x20—\x2010\x20Nov\x202025','type':_0x7ba8af(0x222)},{'id':0xf,'text':_0x7ba8af(0x1f4),'type':_0x7ba8af(0x222)},{'id':0x10,'text':'Subject:\x20FY2025\x20Compliance\x20Declaration\x20—\x20please\x20complete\x20by\x2031\x20Oct\x202025','type':_0x7ba8af(0x222)},{'id':0x11,'text':'Subject:\x20Quotation\x20for\x20Signage\x20—\x20site\x20visit\x20follow-up\x20&\x20deposit\x20details','type':_0x7ba8af(0x222)},{'id':0x12,'text':_0x7ba8af(0x218),'type':_0x7ba8af(0x222)},{'id':0x13,'text':'Subject:\x20Shared\x20drive\x20\x22Curriculum\x22\x20at\x2092%\x20quota\x20—\x20recommended\x20actions','type':'real'},{'id':0x14,'text':_0x7ba8af(0x1e0),'type':_0x7ba8af(0x222)}],emailsContainer=document[_0x7ba8af(0x1ec)]('emails'),timerEl=document[_0x7ba8af(0x1ec)](_0x7ba8af(0x1f3)),progressFill=document[_0x7ba8af(0x1ec)](_0x7ba8af(0x1dc)),progressText=document['getElementById']('progressText'),attemptsLeftEl=document[_0x7ba8af(0x1ec)](_0x7ba8af(0x1d0)),resultEl=document[_0x7ba8af(0x1ec)](_0x7ba8af(0x1fc)),submitBtn=document['getElementById'](_0x7ba8af(0x20c)),sabotageBanner=document[_0x7ba8af(0x1ec)](_0x7ba8af(0x216)),disabledOverlay=document['getElementById'](_0x7ba8af(0x1fd));function createBinaryRain(){const _0x3ad0af=_0x7ba8af,_0x2095d6=document['getElementById']('binaryRain'),_0x22e45d='01',_0x3fa9c9=0x19;for(let _0x55d354=0x0;_0x55d354<_0x3fa9c9;_0x55d354++){const _0x1a79c7=document[_0x3ad0af(0x210)]('div');_0x1a79c7[_0x3ad0af(0x1ff)]=_0x3ad0af(0x1d5),_0x1a79c7[_0x3ad0af(0x1f5)]=_0x22e45d[Math[_0x3ad0af(0x21c)](Math[_0x3ad0af(0x219)]()*_0x22e45d[_0x3ad0af(0x21a)])],_0x1a79c7[_0x3ad0af(0x1e3)][_0x3ad0af(0x200)]=Math['random']()*0x64+'vw',_0x1a79c7[_0x3ad0af(0x1e3)]['animationDuration']=0x3+Math[_0x3ad0af(0x219)]()*0x5+'s',_0x1a79c7[_0x3ad0af(0x1e3)][_0x3ad0af(0x1e8)]=Math['random']()*0x2+'s',_0x1a79c7[_0x3ad0af(0x1e3)]['opacity']=Math['random']()*0.4+0.1,_0x2095d6[_0x3ad0af(0x1e2)](_0x1a79c7);}}function updateProgress(){const _0x3354bc=_0x7ba8af,_0x286e36=document[_0x3354bc(0x1d3)]('#real\x20.mail[data-type=\x22real\x22],\x20#phishing\x20.mail[data-type=\x22phishing\x22]')['length'],_0x3a6039=_0x286e36/emails[_0x3354bc(0x21a)]*0x64;progressFill[_0x3354bc(0x1e3)][_0x3354bc(0x1c3)]=_0x3a6039+'%',progressText['textContent']=Math['round'](_0x3a6039)+'%';}function createMailElement(_0x35d251){const _0x433e29=_0x7ba8af,_0x5bdca7=document[_0x433e29(0x210)](_0x433e29(0x1d1));return _0x5bdca7['className']=_0x433e29(0x1ea),_0x5bdca7[_0x433e29(0x1da)]=!![],_0x5bdca7['id']=_0x433e29(0x20f)+_0x35d251['id'],_0x5bdca7[_0x433e29(0x1f5)]=_0x35d251[_0x433e29(0x1be)],_0x5bdca7[_0x433e29(0x1c5)][_0x433e29(0x1c1)]=_0x35d251['type'],_0x5bdca7;}function renderEmails(_0x49eb81=null){const _0x58c6d3=_0x7ba8af;emailsContainer[_0x58c6d3(0x204)]='';let _0x5cf40e=[...emails];Array[_0x58c6d3(0x1b2)](_0x49eb81)&&_0x49eb81[_0x58c6d3(0x21a)]===emails['length']?_0x5cf40e=_0x49eb81['map'](_0x2ae395=>emails['find'](_0x4b3e87=>_0x4b3e87['id']===_0x2ae395)):_0x5cf40e[_0x58c6d3(0x225)](()=>Math[_0x58c6d3(0x219)]()-0.5),_0x5cf40e[_0x58c6d3(0x1f7)](_0x4f4ba1=>emailsContainer[_0x58c6d3(0x1e2)](createMailElement(_0x4f4ba1))),updateProgress();}function resetAllEmails(){const _0x2638b9=_0x7ba8af;document['querySelectorAll'](_0x2638b9(0x226))[_0x2638b9(0x1f7)](_0x160325=>{emailsContainer['appendChild'](_0x160325);}),updateProgress();}let dragged=null;document[_0x7ba8af(0x1d4)](_0x7ba8af(0x1ca),_0x404792=>{const _0x515d97=_0x7ba8af;_0x404792[_0x515d97(0x20e)]&&_0x404792['target']['classList'][_0x515d97(0x1f8)](_0x515d97(0x1ea))&&(dragged=_0x404792[_0x515d97(0x20e)],_0x404792[_0x515d97(0x20e)][_0x515d97(0x1f2)][_0x515d97(0x1c6)](_0x515d97(0x1d9)),_0x404792[_0x515d97(0x1ad)]?.['setData'](_0x515d97(0x1ba),_0x404792['target']['id']));}),document[_0x7ba8af(0x1d4)]('dragend',_0x990c0e=>{const _0x6b14bb=_0x7ba8af;if(_0x990c0e[_0x6b14bb(0x20e)]&&_0x990c0e[_0x6b14bb(0x20e)][_0x6b14bb(0x1f2)])_0x990c0e['target'][_0x6b14bb(0x1f2)][_0x6b14bb(0x1c8)](_0x6b14bb(0x1d9));dragged=null;}),document[_0x7ba8af(0x1d3)](_0x7ba8af(0x211))['forEach'](_0x340eba=>{const _0x488a79=_0x7ba8af;_0x340eba[_0x488a79(0x1d4)](_0x488a79(0x1f9),_0x36fa16=>_0x36fa16[_0x488a79(0x1c4)]()),_0x340eba[_0x488a79(0x1d4)]('drop',_0x496ef5=>{const _0x25b618=_0x488a79;_0x496ef5['preventDefault']();if(dragged)_0x340eba[_0x25b618(0x1e2)](dragged),updateProgress();else{const _0x3435a5=_0x496ef5[_0x25b618(0x1ad)]&&_0x496ef5[_0x25b618(0x1ad)][_0x25b618(0x205)]&&_0x496ef5[_0x25b618(0x1ad)][_0x25b618(0x205)](_0x25b618(0x1ba))||null;if(_0x3435a5){const _0x3cdfb2=document[_0x25b618(0x1ec)](_0x3435a5);if(_0x3cdfb2)_0x340eba['appendChild'](_0x3cdfb2);updateProgress();}}});});let timerInterval;function startTimer(){const _0x5b52c1=_0x7ba8af;clearInterval(timerInterval);let _0x345320=0xb4;timerEl[_0x5b52c1(0x1f5)]=formatMMSS(_0x345320),timerInterval=setInterval(()=>{const _0x2cabc3=_0x5b52c1;_0x345320--,timerEl['textContent']=formatMMSS(Math[_0x2cabc3(0x1f1)](0x0,_0x345320)),_0x345320<=0x0&&(clearInterval(timerInterval),handleTimeUp());},0x3e8);}function formatMMSS(_0x3d6053){const _0x2e4deb=_0x7ba8af,_0x34440e=Math[_0x2e4deb(0x21c)](_0x3d6053/0x3c)[_0x2e4deb(0x214)]()[_0x2e4deb(0x201)](0x2,'0'),_0x462910=(_0x3d6053%0x3c)['toString']()[_0x2e4deb(0x201)](0x2,'0');return _0x34440e+':'+_0x462910;}function handleTimeUp(){const _0x40f221=_0x7ba8af;if(attemptsLeft<=0x0)return;resultEl[_0x40f221(0x204)]=_0x40f221(0x220)+(attemptsLeft-0x1)+_0x40f221(0x1d7),attemptsLeft--,localStorage[_0x40f221(0x21b)](_0x40f221(0x1eb),attemptsLeft),attemptsLeft<=0x0?gameOver():setTimeout(()=>{resetGame();},0xbb8),updateUI();}function disableAllInteractions(){const _0x1a8fc3=_0x7ba8af;submitBtn[_0x1a8fc3(0x227)]=!![],document['querySelectorAll'](_0x1a8fc3(0x226))[_0x1a8fc3(0x1f7)](_0x58a156=>{const _0x5aa553=_0x1a8fc3;_0x58a156[_0x5aa553(0x1da)]=![],_0x58a156['classList'][_0x5aa553(0x1c6)](_0x5aa553(0x227));}),document[_0x1a8fc3(0x1d3)](_0x1a8fc3(0x211))['forEach'](_0x11338e=>{const _0x4ca021=_0x1a8fc3;_0x11338e[_0x4ca021(0x1e3)][_0x4ca021(0x1e1)]=_0x4ca021(0x208),_0x11338e['style']['opacity']=_0x4ca021(0x206);}),clearInterval(timerInterval),disabledOverlay[_0x1a8fc3(0x1e3)][_0x1a8fc3(0x1cf)]=_0x1a8fc3(0x21f);}submitBtn[_0x7ba8af(0x1d4)](_0x7ba8af(0x1b7),()=>{const _0x4415c6=_0x7ba8af;if(gameCompleted||attemptsLeft<=0x0)return;submitBtn[_0x4415c6(0x227)]=!![],clearInterval(timerInterval);let _0x7f5172=0x0;emails['forEach'](_0x54e861=>{const _0x93f739=_0x4415c6,_0x39bbe4=document[_0x93f739(0x1ec)](_0x93f739(0x20f)+_0x54e861['id']);if(_0x39bbe4&&_0x39bbe4[_0x93f739(0x229)]&&_0x39bbe4[_0x93f739(0x229)]['id']===_0x54e861[_0x93f739(0x1c1)])_0x7f5172++;});if(_0x7f5172===emails['length']){gameCompleted=!![],localStorage['setItem'](_0x4415c6(0x1b8),'true'),resultEl[_0x4415c6(0x204)]='\x0a\x20\x20\x20\x20\x20\x20<div\x20class=\x22msg-success\x22>🟢\x20Perfect!\x20All\x20'+_0x7f5172+_0x4415c6(0x228);let _0x270f74=0x3;const _0x46014e=document[_0x4415c6(0x1ec)](_0x4415c6(0x1b1)),_0x3264a2=setInterval(()=>{const _0xb8fa75=_0x4415c6;_0x270f74--;if(_0x46014e)_0x46014e[_0xb8fa75(0x1f5)]=_0x270f74;_0x270f74<=0x0&&(clearInterval(_0x3264a2),localStorage[_0xb8fa75(0x207)](_0xb8fa75(0x1eb)),localStorage[_0xb8fa75(0x207)](_0xb8fa75(0x1b8)),sessionStorage[_0xb8fa75(0x207)](_0xb8fa75(0x1b0)),window[_0xb8fa75(0x1b4)]['href']=_0xb8fa75(0x1c2));},0x3e8);}else attemptsLeft--,localStorage[_0x4415c6(0x21b)](_0x4415c6(0x1eb),attemptsLeft),attemptsLeft>0x0?resultEl[_0x4415c6(0x204)]=_0x4415c6(0x1ce)+_0x7f5172+_0x4415c6(0x1d8)+emails['length']+_0x4415c6(0x223)+attemptsLeft+_0x4415c6(0x1b3):gameOver();updateUI();});function retryAttempt(){resetGame();}function resetGame(){const _0x152d43=_0x7ba8af;attemptsLeft>0x0&&!gameCompleted&&(resetAllEmails(),startTimer(),resultEl[_0x152d43(0x1f5)]='',submitBtn['disabled']=![]);}function gameOver(){const _0x4e249b=_0x7ba8af;resultEl[_0x4e249b(0x204)]=_0x4e249b(0x1de),disableAllInteractions();}function updateUI(){const _0x1bd022=_0x7ba8af;attemptsLeftEl[_0x1bd022(0x1f5)]=attemptsLeft,submitBtn['disabled']=gameCompleted||attemptsLeft<=0x0;}function _0x4704(){const _0x5e9803=['ms,\x20opacity\x20250ms\x20ease\x20','5MdLRdo','phishingSessionStarted','redirCountdown','isArray','\x20attempt(s)\x20remaining.\x20Try\x20again!</div>\x0a\x20\x20\x20\x20\x20\x20\x20\x20<button\x20onclick=\x22retryAttempt()\x22\x20style=\x22margin-top:10px;\x20padding:8px\x2016px;\x20background:#ff4444;\x20color:white;\x20border:none;\x20border-radius:5px;\x20cursor:pointer;\x22>Try\x20Again</button>\x0a\x20\x20\x20\x20\x20\x20','location','key','shuffling','click','phishingCompleted','sabotageTrigger','text/plain','Subject:\x20Security\x20Alert\x20—\x20Verify\x20your\x20account\x20now\x20or\x20it\x20will\x20be\x20suspended','setAttribute','inter.html','text','children','5933860Egwxrp','type','Challenge\x202.5.html','width','preventDefault','dataset','add','6632778WkoXag','remove','filter','dragstart','getItem','Subject:\x20Action\x20Required\x20—\x20Your\x20account\x20password\x20expires\x20today','995811BKEdlU','\x0a\x20\x20\x20\x20\x20\x20\x20\x20<div>🟢\x20Correct:\x20<strong>','display','attemptsLeft','div','Subject:\x20Action\x20required\x20—\x20Password\x20expiry\x20for\x20alice.khan@gemsae.com','querySelectorAll','addEventListener','binary-digit','map','\x20attempt(s)\x20remaining.</div>','</strong>\x20/\x20','dragging','draggable','block','progressFill','find','\x0a\x20\x20\x20\x20<div\x20class=\x22msg-error\x22>🚫\x20GAME\x20OVER</div>\x0a\x20\x20\x20\x20<div>No\x20attempts\x20remaining.\x20All\x20interactions\x20disabled.</div>\x0a\x20\x20','131304Hlvspr','Subject:\x20Refunds\x20for\x20canceled\x20session\x20—\x20timeline\x20&\x20support','pointerEvents','appendChild','style','12760594eKRied','Subject:\x20A\x20document\x20has\x20been\x20shared\x20with\x20you\x20—\x20Project\x20Plan\x20v2','newValue','9aOXzZx','animationDelay','search','mail','phishingAttempts','getElementById','tabindex','transform\x20300ms\x20ease\x20','storage','Subject:\x20Invoice\x20INV-2025-774\x20—\x20Immediate\x20payment\x20required','max','classList','timer','Subject:\x20Payment\x20received\x20—\x20INV-7812,\x20Ref:\x20PAY-2025-0987','textContent','Starting\x20with\x20attempts:','forEach','contains','dragover','phishing','Subject:\x20Regional\x20Merit\x20Scholarship\x20—\x20shortlist\x20notification','resultDisplay','disabledOverlay','908772pjTuEc','className','left','padStart','opacity','transition','innerHTML','getData','0.5','removeItem','none','Subject:\x20Important\x20—\x20Tax\x20refund\x20requires\x20confirmation','\x0a\x20\x20\x20\x20\x20\x20<div\x20class=\x22msg-error\x22>🚫\x20GAME\x20OVER</div>\x0a\x20\x20\x20\x20\x20\x20<div>No\x20attempts\x20remaining.\x20All\x20interactions\x20disabled.</div>\x0a\x20\x20\x20\x20','log','submitBtn','true','target','mail-','createElement','.column','includes','Subject:\x20Delivery\x20attempt\x20failed\x20—\x20redelivery\x20fee\x20required','toString','287CbEmbE','sabotageBanner','lastHandledSabotage','Subject:\x20Matching\x20campaign\x20this\x20weekend\x20—\x20support\x20our\x20scholarship\x20fund','random','length','setItem','floor','33826wAoeUt','from','flex','<div\x20class=\x22msg-error\x22>Time\x27s\x20up!\x20','225YGcRcW','real','</div>\x0a\x20\x20\x20\x20\x20\x20\x20\x20<div\x20class=\x22msg-error\x22>','transform','sort','.mail','disabled','\x20correct\x20—\x20proceeding...</div>\x0a\x20\x20\x20\x20\x20\x20<div\x20style=\x22margin-top:8px;\x20opacity:0.9;\x22>Redirecting\x20in\x20<span\x20id=\x22redirCountdown\x22>3</span>\x20seconds...</div>\x0a\x20\x20\x20\x20','parentElement','dataTransfer'];_0x4704=function(){return _0x5e9803;};return _0x4704();}function _0x477b(_0x5e25c8,_0x120983){const _0x470438=_0x4704();return _0x477b=function(_0x477b20,_0x244e7d){_0x477b20=_0x477b20-0x1ad;let _0x3b4f4c=_0x470438[_0x477b20];return _0x3b4f4c;},_0x477b(_0x5e25c8,_0x120983);}function checkInitialState(){const _0x495860=_0x7ba8af;if(gameCompleted){resultEl['innerHTML']='\x0a\x20\x20\x20\x20\x20\x20<div\x20class=\x22msg-success\x22>✅\x20Challenge\x20Already\x20Completed</div>\x0a\x20\x20\x20\x20\x20\x20<div\x20style=\x22margin-top:8px;\x22>Redirecting\x20in\x20<span\x20id=\x22redirCountdown\x22>3</span>\x20seconds...</div>\x0a\x20\x20\x20\x20';let _0x4b653f=0x3;const _0x45e650=document['getElementById'](_0x495860(0x1b1)),_0x564e11=setInterval(()=>{const _0x494269=_0x495860;_0x4b653f--;if(_0x45e650)_0x45e650[_0x494269(0x1f5)]=_0x4b653f;_0x4b653f<=0x0&&(clearInterval(_0x564e11),window[_0x494269(0x1b4)]['href']=_0x494269(0x1c2));},0x3e8);}else attemptsLeft<=0x0?(disableAllInteractions(),resultEl['innerHTML']=_0x495860(0x20a)):startTimer();}let lastSabotageTs=localStorage[_0x7ba8af(0x1cb)]('lastHandledSabotage')||'0';function visualShuffleAnimation(_0x2b7e0c){const _0x49fdcb=_0x7ba8af,_0x5f2300=emailsContainer;_0x5f2300[_0x49fdcb(0x1f2)][_0x49fdcb(0x1c6)](_0x49fdcb(0x1b6)),Array[_0x49fdcb(0x21e)](_0x5f2300[_0x49fdcb(0x1bf)])[_0x49fdcb(0x1f7)]((_0x5f52be,_0x1d023d)=>{const _0x5d5252=_0x49fdcb;_0x5f52be['style'][_0x5d5252(0x203)]=_0x5d5252(0x1ee)+_0x1d023d*0xc+_0x5d5252(0x1ae)+_0x1d023d*0xc+'ms',_0x5f52be[_0x5d5252(0x1e3)][_0x5d5252(0x202)]='0.4',_0x5f52be[_0x5d5252(0x1e3)][_0x5d5252(0x224)]='translateY(6px)';}),setTimeout(()=>{const _0xcd712b=_0x49fdcb,_0x593a93={};Array['from'](_0x5f2300['children'])[_0xcd712b(0x1f7)](_0x24b2c0=>{_0x593a93[_0x24b2c0['id']]=_0x24b2c0;}),_0x2b7e0c[_0xcd712b(0x1f7)](_0x5d748b=>{const _0x1629d6=_0xcd712b,_0x1c9d09=_0x593a93[_0x1629d6(0x20f)+_0x5d748b];if(_0x1c9d09)_0x5f2300[_0x1629d6(0x1e2)](_0x1c9d09);}),Array[_0xcd712b(0x21e)](_0x5f2300[_0xcd712b(0x1bf)])[_0xcd712b(0x1f7)]((_0x1d0a6f,_0x1c4477)=>{const _0x3f3197=_0xcd712b;_0x1d0a6f[_0x3f3197(0x1e3)]['opacity']='',_0x1d0a6f[_0x3f3197(0x1e3)][_0x3f3197(0x224)]='',_0x1d0a6f[_0x3f3197(0x1e3)][_0x3f3197(0x203)]='';}),_0x5f2300[_0xcd712b(0x1f2)]['remove']('shuffling');},0x15e);}function performSabotage(_0x4e2eb4){const _0x5c976e=_0x7ba8af;if(!_0x4e2eb4)return;if(Number(_0x4e2eb4)<=Number(lastSabotageTs))return;lastSabotageTs=_0x4e2eb4,localStorage[_0x5c976e(0x21b)](_0x5c976e(0x217),String(lastSabotageTs)),sabotageBanner[_0x5c976e(0x1e3)][_0x5c976e(0x1cf)]=_0x5c976e(0x1db),setTimeout(()=>sabotageBanner[_0x5c976e(0x1e3)][_0x5c976e(0x1cf)]=_0x5c976e(0x208),0x1770);const _0x150f71=emails[_0x5c976e(0x1d6)](_0x5ef8bd=>_0x5ef8bd['id']);for(let _0x192999=_0x150f71[_0x5c976e(0x21a)]-0x1;_0x192999>0x0;_0x192999--){const _0x3be11e=Math[_0x5c976e(0x21c)](Math[_0x5c976e(0x219)]()*(_0x192999+0x1));[_0x150f71[_0x192999],_0x150f71[_0x3be11e]]=[_0x150f71[_0x3be11e],_0x150f71[_0x192999]];}visualShuffleAnimation(_0x150f71);const _0x1c5146=_0x150f71['map'](_0x2d0a00=>emails[_0x5c976e(0x1dd)](_0x2f0ad1=>_0x2f0ad1['id']===_0x2d0a00))[_0x5c976e(0x1c9)](Boolean);emails['splice'](0x0,emails[_0x5c976e(0x21a)],..._0x1c5146),setTimeout(()=>{makeFocusable();},0x2bc);}window[_0x7ba8af(0x1d4)](_0x7ba8af(0x1ef),_0x41c724=>{const _0x528ed8=_0x7ba8af;_0x41c724[_0x528ed8(0x1b5)]===_0x528ed8(0x1b9)&&performSabotage(_0x41c724[_0x528ed8(0x1e6)]);}),window['addEventListener']('DOMContentLoaded',()=>{const _0x5823dd=_0x7ba8af,_0x3e6839=localStorage['getItem'](_0x5823dd(0x1b9));if(_0x3e6839)performSabotage(_0x3e6839);}),createBinaryRain(),renderEmails(),updateUI(),checkInitialState();function makeFocusable(){const _0x53e157=_0x7ba8af;document[_0x53e157(0x1d3)](_0x53e157(0x226))['forEach'](_0x58268f=>_0x58268f[_0x53e157(0x1bc)](_0x53e157(0x1ed),'0')),document[_0x53e157(0x1d3)]('.column')['forEach'](_0x43c7cb=>_0x43c7cb['setAttribute'](_0x53e157(0x1ed),'0'));}makeFocusable();const observer=new MutationObserver(()=>makeFocusable());observer['observe'](emailsContainer,{'childList':!![],'subtree':!![]});
+</script>
+</body>
+</html>
