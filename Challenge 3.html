@@ -214,18 +214,18 @@ console.log('Starting with attempts:', attemptsLeft, 'completed:', gameCompleted
 
 // SIMPLIFIED code blocks - easier to understand
 const baseBlocks = [
-    { text: 'Enable Firewall', safe: true },
-    { text: 'Scan for Viruses', safe: true },
-    { text: 'Delete All Files', safe: false },
-    { text: 'Open All Ports', safe: false },
-    { text: 'Update Security', safe: true },
-    { text: 'Encrypt Data', safe: true },
-    { text: 'Block Suspicious IP', safe: true },
-    { text: 'Install Malware', safe: false },
-    { text: 'Analyze Logs', safe: true },
-    { text: 'Quarantine Threat', safe: true },
-    { text: 'Disable Protection', safe: false },
-    { text: 'Format Hard Drive', safe: false }
+    { text: 'system.run_fireset();', safe: true },
+    { text: 'system.run_unaware_scan();', safe: true },
+    { text: 'system.run_factory.flush();', safe: false },
+    { text: 'system.run_disable();', safe: false },
+    { text: 'system.update_user();', safe: true },
+    { text: 'system.clear();', safe: true },
+    { text: 'system.block_trash();', safe: true },
+    { text: 'system.install_foreign();', safe: false },
+    { text: 'system.search_log();', safe: true },
+    { text: 'system.layer_protect();', safe: true },
+    { text: 'system.disable();', safe: false },
+    { text: 'system.true_acess();', safe: false }
 ];
 
 let selectedBlocks = [];
@@ -464,9 +464,7 @@ function checkInitialState() {
         scoreDisplay.textContent = "Integrity: 100%";
         resultDetails.innerHTML = '<div style="color:#155724;font-weight:bold;">Challenge already completed!</div>';
         showResults();
-        setTimeout(() => {
-            window.location.href = 'next-challenge.html';
-        }, 2000);
+        
     } else if (attemptsLeft <= 0) {
         disableAllInteractions();
         resultTitle.textContent = "🚫 Firewall Compromised";

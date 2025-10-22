@@ -105,7 +105,7 @@
     <div style="font-size: 32px; margin-bottom: 20px;">🚫 ACCESS DENIED</div>
     <div style="font-size: 18px;">Maximum attempts reached</div>
     <div style="font-size: 14px; margin-top: 10px; color: #ff8888;">All interactions disabled</div>
-    <button onclick="resetAllProgress()" style="margin-top:20px; padding:10px 20px; background:#ff4444; color:white; border:none; border-radius:5px; cursor:pointer; font-weight:bold;">Reset All Progress</button>
+    <!-- REMOVED RESET BUTTON -->
   </div>
 
   <div id="taskbar" role="region" aria-label="Controls">
@@ -118,7 +118,6 @@
     </div>
     <div class="attempts-counter">Attempts: <span id="attemptsLeft">3</span></div>
     <div style="margin-left:auto;display:flex;gap:8px;">
-      <button id="resetBtn" type="button">Reset</button>
       <button id="submitBtn" type="button">Submit</button>
     </div>
   </div>
@@ -209,7 +208,6 @@ const progressFill = document.getElementById('progressFill');
 const progressText = document.getElementById('progressText');
 const attemptsLeftEl = document.getElementById('attemptsLeft');
 const resultEl = document.getElementById('resultDisplay');
-const resetBtn = document.getElementById('resetBtn');
 const submitBtn = document.getElementById('submitBtn');
 const sabotageBanner = document.getElementById('sabotageBanner');
 const disabledOverlay = document.getElementById('disabledOverlay');
@@ -338,7 +336,6 @@ function handleTimeUp() {
 function disableAllInteractions() {
   // Disable buttons
   submitBtn.disabled = true;
-  resetBtn.disabled = true;
   
   // Disable drag and drop for all emails
   document.querySelectorAll('.mail').forEach(mail => {
@@ -357,14 +354,6 @@ function disableAllInteractions() {
   
   // Show disabled overlay
   disabledOverlay.style.display = 'flex';
-}
-
-// Reset function for the overlay button
-function resetAllProgress() {
-  localStorage.removeItem('phishingAttempts');
-  localStorage.removeItem('phishingCompleted');
-  sessionStorage.removeItem('phishingSessionStarted');
-  location.reload();
 }
 
 /* SUBMIT with 3 attempts limit */
@@ -441,18 +430,10 @@ function gameOver() {
   disableAllInteractions();
 }
 
-/* RESET */
-resetBtn.addEventListener('click', () => {
-  if (!gameCompleted && attemptsLeft > 0) {
-    resetGame();
-  }
-});
-
 /* Update UI */
 function updateUI() {
   attemptsLeftEl.textContent = attemptsLeft;
   submitBtn.disabled = gameCompleted || attemptsLeft <= 0;
-  resetBtn.disabled = gameCompleted || attemptsLeft <= 0;
 }
 
 /* Check initial state */
